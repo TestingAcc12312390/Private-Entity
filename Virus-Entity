@@ -71,7 +71,7 @@ cue2:Play()
 
 local lighting = game.Lighting.MainColorCorrection
  lighting.TintColor = Color3.fromRGB(255, 51, 255)
- lighting.Contrast = 30
+ lighting.Contrast = 10
  lighting.Saturation = 10
 
  local TweenService = game:GetService("TweenService")
@@ -172,7 +172,7 @@ Color3.fromRGB(255,51,255)
 },
 
 Tease = {
-true,
+false,
 Min = 19.5,
 Max = 19.5
 }
