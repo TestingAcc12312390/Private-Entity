@@ -13,7 +13,7 @@ HeightOffset = 0
 Lights = {
 Flicker = {
 Enabled = true,
-Duration = 100
+Duration = 17
 },
 Shatter = true,
 Repair = false
@@ -34,13 +34,13 @@ Reversed = false
 Rebounding = {
 Enabled = true,
 Type = "Ambush", -- "Blitz"
-Min = 5,
-Max = 5,
+Min = 4,
+Max = 4,
 Delay = 2
 },
 Damage = {
 Enabled = true,
-Range = 40,
+Range = 70,
 Amount = 125,
 DeathDelay = 0.9
 },
@@ -52,7 +52,7 @@ Break = true
 },
 Death = {
 Type = "Guiding", -- "Curious"
-Hints = {"You died to who you call Virus.", "Wait what? I don't remember this entity", "But whatever, hide in the closet when this happens!", "Use what you learned from Ambush."},
+Hints = {"You died to who you call Virus.", "Wait what? I don't remember this entity", "But whatever, hide in the closet when this happens!", "Use what you learned from Ambush!"},
 Cause = "Virus"
 }
 })
