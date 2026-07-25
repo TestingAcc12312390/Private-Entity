@@ -34,9 +34,9 @@ Reversed = false
 Rebounding = {
 Enabled = true,
 Type = "Ambush", -- "Blitz"
-Min = 4,
-Max = 4,
-Delay = 2
+Min = 3,
+Max = 3,
+Delay = 1
 },
 Damage = {
 Enabled = true,
