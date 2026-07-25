@@ -52,7 +52,7 @@ Break = true
 },
 Death = {
 Type = "Guiding", -- "Curious"
-Hints = {"You died to who you call Trollface.", "This entity flickers lights just like rush!", " Hide in the closet when this happens!", "Use what you learned from Rush."},
+Hints = {"You died to who you call Trollface.", "This entity flickers lights just like rush!", "Hide in the closet when this happens!", "Use what you learned from Rush."},
 Cause = "Trollface"
 }
 })
