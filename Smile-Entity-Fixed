@@ -47,7 +47,7 @@ wait(4)
 
 ---====== Load spawner ======---
 
-local Spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/DOORS-Entity-Spawner-V2/main/init.luau"))()
+local Spawner = loadstring(game:HttpGet("https://github.com/idkman60093/Doors-Modes/blob/main/Entity%20Spawner%20V2"))()
 
 ---====== Create entity ======---
 
@@ -88,7 +88,8 @@ Delay = 2
 Damage = {
 Enabled = true,
 Range = 40,
-Amount = 125
+Amount = 125,
+DeathDelay = 0.9
 },
 Crucifixion = {
 Enabled = true,
@@ -158,6 +159,154 @@ end)
 entity:SetCallback("OnDamagePlayer", function(newHealth: number)
 if newHealth <= 0 then
 print("Entity has killed the player")
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+--// SERVICES
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+
+--// REMOVE OLD GUI
+pcall(function()
+ if CoreGui:FindFirstChild("JumpscareGui") then
+  CoreGui.JumpscareGui:Destroy()
+ end
+end)
+
+--// LOAD SOUND
+local function loadSound(data)
+ local sound = Instance.new("Sound")
+ local id = tostring(data[1])
+ local props = data[2] or {}
+
+ for k, v in pairs(props) do
+  if k ~= "SoundId" and k ~= "Parent" then
+   sound[k] = v
+  end
+ end
+
+ if id:find("rbxasset://") then
+  sound.SoundId = id
+ else
+  sound.SoundId = "rbxassetid://" .. id:gsub("%D", "")
+ end
+
+ sound.Parent = workspace
+ return sound
+end
+
+--// CONFIG (Báº N CÃ“ THá»‚ CHá»ˆNH)
+local config = {
+ Image1 = "rbxassetid://11237420484",
+ Image2 = "rbxassetid://11237420484",
+
+ Shake = true,
+
+ Sound1 = {6600188325, {Volume = 10}},
+ Sound2 = {18459521002, {Volume = 10}},
+
+ Flashing = {
+  true,
+  Color3.fromRGB(255,0,0)
+ },
+
+ Tease = {
+  false,
+  Min = 1,
+  Max = 3
+ }
+}
+
+--// CREATE GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "JumpscareGui"
+gui.IgnoreGuiInset = true
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = CoreGui
+
+local bg = Instance.new("Frame")
+bg.Size = UDim2.new(1, 0, 1, 0)
+bg.BackgroundColor3 = Color3.new(0, 0, 0)
+bg.BorderSizePixel = 0
+bg.BackgroundTransparency = 0
+bg.ZIndex = 999
+bg.Parent = gui
+
+local face = Instance.new("ImageLabel")
+face.AnchorPoint = Vector2.new(0.5, 0.5)
+face.Position = UDim2.new(0.5, 0, 0.5, 0)
+face.Size = UDim2.new(0, 150, 0, 150)
+face.BackgroundTransparency = 1
+face.Image = config.Image1
+face.ResampleMode = Enum.ResamplerMode.Pixelated
+face.Parent = bg
+
+--// SIZES
+local screenY = gui.AbsoluteSize.Y
+local minSize = screenY / 5
+local maxSize = screenY / 2.5
+
+--// TEASE
+local sound1, sound2
+if config.Sound1 then sound1 = loadSound(config.Sound1) end
+if config.Sound2 then sound2 = loadSound(config.Sound2) end
+
+if config.Tease and config.Tease[1] then
+ local loops = math.random(config.Tease.Min, config.Tease.Max)
+ if sound1 then sound1:Play() end
+
+ for _ = 1, loops do
+  task.wait(math.random(10, 20) / 100)
+  local grow = (maxSize - minSize) / loops
+  face.Size = face.Size + UDim2.new(0, grow, 0, grow)
+ end
+end
+
+--// FLASHING
+if config.Flashing and config.Flashing[1] then
+ task.spawn(function()
+  while gui.Parent do
+   bg.BackgroundColor3 = config.Flashing[2]
+   task.wait(math.random(25, 100) / 1000)
+   bg.BackgroundColor3 = Color3.new(0, 0, 0)
+   task.wait(math.random(25, 100) / 1000)
+  end
+ end)
+end
+
+--// SHAKE
+if config.Shake then
+ task.spawn(function()
+  local basePos = face.Position
+  while gui.Parent do
+   face.Position = basePos + UDim2.new(0, math.random(-10, 10), 0, math.random(-10, 10))
+   face.Rotation = math.random(-5, 5)
+   task.wait()
+  end
+ end)
+end
+
+--// FINAL JUMPSCARE
+face.Image = config.Image2
+face.Size = UDim2.new(0, maxSize, 0, maxSize)
+
+if sound2 then sound2:Play() end
+
+TweenService:Create(face, TweenInfo.new(0.75), {
+ Size = UDim2.new(0, screenY * 3, 0, screenY * 3),
+ ImageTransparency = 0.5
+}):Play()
+
+task.wait(0.75)
+
+--// CLEANUP
+gui:Destroy()
+if sound1 then sound1:Destroy() end
+if sound2 then sound2:Destroy() end
+
+game.ReplicatedStorage.GameStats["Player_" .. player.Name]
+    .Total.DeathCause.Value = "Smile"
 else
 print("Entity has damaged the player")
 end
