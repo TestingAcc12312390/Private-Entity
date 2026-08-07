@@ -68,7 +68,8 @@ local entity = Spawner:Create({
  Damage = {
   Enabled = true,
   Range = 30,
-  Amount = 125
+  Amount = 125,
+DeathDelay = 0.9
  },
  Crucifixion = {
   Enabled = true,
@@ -127,7 +128,7 @@ local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.
         achievementGiver({
             Title = "The noise..",
             Desc = "Don't Move And pray ",
-            Reason = "The boiled one.",
+            Reason = "Encounter The Boiled One",
             Image = "rbxassetid://133181234252846"
         })
 end)
