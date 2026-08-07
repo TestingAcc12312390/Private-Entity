@@ -123,6 +123,13 @@ end)
 
 entity:SetCallback("OnDespawned", function()
     print("Entity has despawned")
+local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
+        achievementGiver({
+            Title = "The noise..",
+            Desc = "Don't Move And pray ",
+            Reason = "The boiled one.",
+            Image = "rbxassetid://133181234252846"
+        })
 end)
 
 entity:SetCallback("OnDamagePlayer", function(newHealth: number)
