@@ -47,7 +47,7 @@ wait(4)
 
 ---====== Load spawner ======---
 
-local Spawner = loadstring(game:HttpGet("https://github.com/idkman60093/Doors-Modes/blob/main/Entity%20Spawner%20V2"))()
+local Spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/idkman60093/Doors-Modes/main/Entity%20Spawner%20V2"))()
 
 ---====== Create entity ======---
 
