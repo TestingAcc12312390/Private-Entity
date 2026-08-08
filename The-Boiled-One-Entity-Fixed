@@ -1,3 +1,5 @@
+if game.Workspace:FindFirstChild("SeekMovingNewClone") then return end
+
 local latestRoom = game.ReplicatedStorage.GameData.LatestRoom.Value
 
 -- Check if in Seek, Figure, or rooms 90-100
