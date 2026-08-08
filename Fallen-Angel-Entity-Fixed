@@ -1,352 +1,497 @@
-local latestRoom = game.ReplicatedStorage.GameData.LatestRoom.Value
-
--- Check if in Seek, Figure, or rooms 90-100
-if game.Workspace:FindFirstChild("SeekMovingNewClone") or 
-   latestRoom == 50 or latestRoom == 100 or 
-   (latestRoom >= 90 and latestRoom <= 100) then
-    entityModel = false -- Prevent entity from spawning
-end
-
-    local caption = game.Players.LocalPlayer:WaitForChild("PlayerGui").MainUI.MainFrame.Caption
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Dont Move.", true)
-caption.TextColor3 = Color3.fromRGB(255, 0, 0)
-
----====== Load spawner ======---
-
-local Spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/idkman60093/Doors-Modes/refs/heads/main/Entity%20Spawner%20V2"))()
-
----====== Create entity ======---
-
-local entity = Spawner:Create({
- Entity = {
-  Name = "Fallen Angel",
-  Asset = "rbxassetid://10690166379",
-  HeightOffset = 0
- },
- Lights = {
-  Flicker = {
-   Enabled = false,
-   Duration = 1
-  },
-  Shatter = true,
-  Repair = false
- },
- Earthquake = {
-  Enabled = false
- },
- CameraShake = {
-  Enabled = false,
-  Range = 100,
-  Values = {1.5, 20, 0.1, 1}
- },
- Movement = {
-  Speed = 128,
-  Delay = 1,
-  Reversed = false
- },
- Rebounding = {
-  Enabled = false,
-  Type = "Ambush",
-  Min = 1,
-  Max = 1,
-  Delay = 2
- },
- Damage = {
-  Enabled = false,
-  Range = 40,
-  Amount = 125,
-  DeathDelay = 0.9
-},
- Crucifixion = {
-  Enabled = true,
-  Range = 70,
-  Resist = false,
-  Break = true
- },
- Death = {
-  Type = "Guiding",
-  Hints = {"You died to Fallen Angel.", "You must not move when he spawns...", "I suggest you to stay still until he dissapeared", "Good luck."},
-  Cause = "Fallen Angel"
- }
-})
-
---------------------------------------------------
--- FREEZE / MOVEMENT + JUMPSCARE
---------------------------------------------------
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 
 local player = Players.LocalPlayer
-local movementCheck = nil
 
 --------------------------------------------------
--- JUMPSCARE FUNCTION
+-- ROOM CHECK
+--------------------------------------------------
+
+local latestRoom = game.ReplicatedStorage.GameData.LatestRoom.Value
+
+if game.Workspace:FindFirstChild("SeekMovingNewClone")
+	or latestRoom == 50
+	or latestRoom == 100
+	or (latestRoom >= 90 and latestRoom <= 100) then
+
+	entityModel = false
+end
+
+--------------------------------------------------
+-- CAPTION
+--------------------------------------------------
+
+local caption = player:WaitForChild("PlayerGui")
+	.MainUI.MainFrame.Caption
+
+require(player.PlayerGui.MainUI.Initiator.Main_Game)
+	.caption("Dont Move.", true)
+
+caption.TextColor3 = Color3.fromRGB(255, 0, 0)
+
+--------------------------------------------------
+-- LOAD SPAWNER
+--------------------------------------------------
+
+local Spawner = loadstring(game:HttpGet(
+	"https://raw.githubusercontent.com/idkman60093/Doors-Modes/refs/heads/main/Entity%20Spawner%20V2"
+))()
+
+--------------------------------------------------
+-- MOVEMENT VARIABLES
+--------------------------------------------------
+
+local movementCheck = nil
+local fallenAngelActive = false
+local currentEntityModel = nil
+
+--------------------------------------------------
+-- CHECK IF ENTITY IS BANISHED
+--------------------------------------------------
+
+local function isBanished()
+
+	if not currentEntityModel then
+		return false
+	end
+
+	local success, result = pcall(function()
+		return currentEntityModel:GetAttribute("BeingBanished") == true
+	end)
+
+	if success then
+		return result
+	end
+
+	return false
+end
+
+--------------------------------------------------
+-- STOP MOVEMENT CHECK
+--------------------------------------------------
+
+local function stopFreezeCheck()
+
+	fallenAngelActive = false
+
+	if movementCheck then
+		movementCheck:Disconnect()
+		movementCheck = nil
+	end
+end
+
+--------------------------------------------------
+-- JUMPSCARE
 --------------------------------------------------
 
 local function playFallenAngelJumpscare()
 
-    -- Remove old jumpscare
-    pcall(function()
-        local old = CoreGui:FindFirstChild("JumpscareGui")
-        if old then
-            old:Destroy()
-        end
-    end)
+	pcall(function()
+		local old = CoreGui:FindFirstChild("JumpscareGui")
 
-    local config = {
-        Image1 = "rbxassetid://0",
-        Image2 = "rbxassetid://111970164409344",
+		if old then
+			old:Destroy()
+		end
+	end)
 
-        Sound1 = {0, {Volume = 10}},
-        Sound2 = {18564431123, {Volume = 10}},
+	local config = {
+		Image1 = "rbxassetid://0",
+		Image2 = "rbxassetid://111970164409344",
 
-        Shake = true
-    }
+		Sound1 = {0, {Volume = 10}},
+		Sound2 = {18564431123, {Volume = 10}},
 
-    -- Sound loader
-    local function loadSound(data)
-        local sound = Instance.new("Sound")
-        sound.SoundId = "rbxassetid://" .. tostring(data[1])
+		Shake = true
+	}
 
-        for property, value in pairs(data[2] or {}) do
-            if property ~= "SoundId" and property ~= "Parent" then
-                sound[property] = value
-            end
-        end
+	local function loadSound(data)
 
-        sound.Parent = workspace
-        return sound
-    end
+		local sound = Instance.new("Sound")
+		sound.SoundId = "rbxassetid://" .. tostring(data[1])
 
-    -- GUI
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "JumpscareGui"
-    gui.IgnoreGuiInset = true
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    gui.Parent = CoreGui
+		for property, value in pairs(data[2] or {}) do
+			if property ~= "SoundId" and property ~= "Parent" then
+				sound[property] = value
+			end
+		end
 
-    local bg = Instance.new("Frame")
-    bg.Size = UDim2.fromScale(1, 1)
-    bg.BackgroundColor3 = Color3.new(0, 0, 0)
-    bg.BorderSizePixel = 0
-    bg.ZIndex = 999
-    bg.Parent = gui
+		sound.Parent = workspace
 
-    local face = Instance.new("ImageLabel")
-    face.AnchorPoint = Vector2.new(0.5, 0.5)
-    face.Position = UDim2.fromScale(0.5, 0.5)
-    face.Size = UDim2.fromOffset(150, 150)
-    face.BackgroundTransparency = 1
-    face.Image = config.Image1
-    face.ZIndex = 1000
-    face.Parent = bg
+		return sound
+	end
 
-    local screenY = gui.AbsoluteSize.Y
-    local maxSize = screenY / 2.5
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "JumpscareGui"
+	gui.IgnoreGuiInset = true
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.Parent = CoreGui
 
-    -- Sounds
-    local sound1 = loadSound(config.Sound1)
-    local sound2 = loadSound(config.Sound2)
+	local bg = Instance.new("Frame")
+	bg.Size = UDim2.fromScale(1, 1)
+	bg.BackgroundColor3 = Color3.new(0, 0, 0)
+	bg.BorderSizePixel = 0
+	bg.ZIndex = 999
+	bg.Parent = gui
 
-    sound1:Play()
+	local face = Instance.new("ImageLabel")
+	face.AnchorPoint = Vector2.new(0.5, 0.5)
+	face.Position = UDim2.fromScale(0.5, 0.5)
+	face.Size = UDim2.fromOffset(150, 150)
+	face.BackgroundTransparency = 1
+	face.Image = config.Image1
+	face.ZIndex = 1000
+	face.Parent = bg
 
-    -- Flash
-    task.spawn(function()
-        while gui.Parent do
-            bg.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            task.wait(0.05)
+	local screenY = gui.AbsoluteSize.Y
+	local maxSize = screenY / 2.5
 
-            if not gui.Parent then
-                break
-            end
+	local sound1 = loadSound(config.Sound1)
+	local sound2 = loadSound(config.Sound2)
 
-            bg.BackgroundColor3 = Color3.new(0, 0, 0)
-            task.wait(0.05)
-        end
-    end)
+	sound1:Play()
 
-    -- Shake
-    if config.Shake then
-        task.spawn(function()
-            local basePosition = face.Position
+	task.spawn(function()
 
-            while gui.Parent do
-                face.Position =
-                    basePosition +
-                    UDim2.fromOffset(
-                        math.random(-10, 10),
-                        math.random(-10, 10)
-                    )
+		while gui.Parent do
 
-                face.Rotation = math.random(-5, 5)
+			bg.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			task.wait(0.05)
 
-                task.wait()
-            end
-        end)
-    end
+			if not gui.Parent then
+				break
+			end
 
-    -- Final jumpscare
-    task.wait(0.2)
+			bg.BackgroundColor3 = Color3.new(0, 0, 0)
+			task.wait(0.05)
+		end
+	end)
 
-    face.Image = config.Image2
-    face.Size = UDim2.fromOffset(maxSize, maxSize)
+	if config.Shake then
 
-    sound2:Play()
+		task.spawn(function()
 
-    local tween = TweenService:Create(
-        face,
-        TweenInfo.new(0.75),
-        {
-            Size = UDim2.fromOffset(screenY * 3, screenY * 3),
-            ImageTransparency = 0.5
-        }
-    )
+			local basePosition = face.Position
 
-    tween:Play()
+			while gui.Parent do
 
-    task.wait(0.75)
+				face.Position =
+					basePosition +
+					UDim2.fromOffset(
+						math.random(-10, 10),
+						math.random(-10, 10)
+					)
 
-    -- Cleanup
-    if sound1 then
-        sound1:Destroy()
-    end
+				face.Rotation = math.random(-5, 5)
 
-    if sound2 then
-        sound2:Destroy()
-    end
+				task.wait()
+			end
+		end)
+	end
 
-    if gui then
-        gui:Destroy()
-    end
+	task.wait(0.2)
+
+	face.Image = config.Image2
+	face.Size = UDim2.fromOffset(maxSize, maxSize)
+
+	sound2:Play()
+
+	local tween = TweenService:Create(
+		face,
+		TweenInfo.new(0.75),
+		{
+			Size = UDim2.fromOffset(screenY * 3, screenY * 3),
+			ImageTransparency = 0.5
+		}
+	)
+
+	tween:Play()
+
+	task.wait(0.75)
+
+	sound1:Destroy()
+	sound2:Destroy()
+	gui:Destroy()
 end
 
 --------------------------------------------------
--- FREEZE CHECK
+-- START FREEZE CHECK
 --------------------------------------------------
 
 local function startFreezeCheck()
 
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoid = character:WaitForChild("Humanoid")
-    local root = character:WaitForChild("HumanoidRootPart")
+	local character = player.Character or player.CharacterAdded:Wait()
+	local humanoid = character:WaitForChild("Humanoid")
+	local root = character:WaitForChild("HumanoidRootPart")
 
-    if movementCheck then
-        movementCheck:Disconnect()
-        movementCheck = nil
-    end
+	fallenAngelActive = true
 
-    local lastPosition = root.Position
+	if movementCheck then
+		movementCheck:Disconnect()
+		movementCheck = nil
+	end
 
-    movementCheck = RunService.Heartbeat:Connect(function()
+	local lastPosition = root.Position
 
-        if not character.Parent or humanoid.Health <= 0 then
-            if movementCheck then
-                movementCheck:Disconnect()
-                movementCheck = nil
-            end
+	movementCheck = RunService.Heartbeat:Connect(function()
 
-            return
-        end
+		--------------------------------------------------
+		-- CRUCIFIED / BANISHED
+		--------------------------------------------------
 
-        local currentPosition = root.Position
+		if isBanished() then
 
-        -- PLAYER MOVED
-        if (currentPosition - lastPosition).Magnitude > 0.05 then
+			print("Fallen Angel was crucified - movement allowed!")
 
-            -- Set death cause BEFORE death
-            pcall(function()
-                game.ReplicatedStorage.GameStats
-                    ["Player_" .. player.Name]
-                    .Total.DeathCause.Value = "Fallen Angel"
-            end)
+			stopFreezeCheck()
 
-            -- Stop movement detection
-            movementCheck:Disconnect()
-            movementCheck = nil
+			return
+		end
 
-            -- Play jumpscare
-            task.spawn(playFallenAngelJumpscare)
+		--------------------------------------------------
+		-- ENTITY NO LONGER ACTIVE
+		--------------------------------------------------
 
-            -- Kill player
-            humanoid.Health = 0
+		if not fallenAngelActive then
+			stopFreezeCheck()
+			return
+		end
 
-            return
-        end
+		if not character.Parent or humanoid.Health <= 0 then
+			stopFreezeCheck()
+			return
+		end
 
-        lastPosition = currentPosition
-    end)
+		--------------------------------------------------
+		-- PLAYER MOVED
+		--------------------------------------------------
+
+		local currentPosition = root.Position
+
+		if (currentPosition - lastPosition).Magnitude > 0.05 then
+
+			-- FINAL CRUCIFIX CHECK
+			if isBanished() then
+				stopFreezeCheck()
+				return
+			end
+
+			-- Death cause
+			pcall(function()
+
+				game.ReplicatedStorage.GameStats
+					["Player_" .. player.Name]
+					.Total.DeathCause.Value = "Fallen Angel"
+
+			end)
+
+			stopFreezeCheck()
+
+			task.spawn(playFallenAngelJumpscare)
+
+			humanoid.Health = 0
+
+			return
+		end
+
+		lastPosition = currentPosition
+	end)
 end
+
+--------------------------------------------------
+-- CREATE ENTITY
+--------------------------------------------------
+
+local entity = Spawner:Create({
+
+	Entity = {
+		Name = "Fallen Angel",
+		Asset = "rbxassetid://10690166379",
+		HeightOffset = 0
+	},
+
+	Lights = {
+		Flicker = {
+			Enabled = false,
+			Duration = 1
+		},
+
+		Shatter = true,
+		Repair = false
+	},
+
+	Earthquake = {
+		Enabled = false
+	},
+
+	CameraShake = {
+		Enabled = false,
+		Range = 100,
+		Values = {1.5, 20, 0.1, 1}
+	},
+
+	Movement = {
+		Speed = 128,
+		Delay = 1,
+		Reversed = false
+	},
+
+	Rebounding = {
+		Enabled = false,
+		Type = "Ambush",
+		Min = 1,
+		Max = 1,
+		Delay = 2
+	},
+
+	Damage = {
+		Enabled = false,
+		Range = 40,
+		Amount = 125,
+		DeathDelay = 0.9
+	},
+
+	Crucifixion = {
+		Enabled = true,
+		Range = 70,
+		Resist = false,
+		Break = true
+	},
+
+	Death = {
+		Type = "Guiding",
+
+		Hints = {
+			"You died to Fallen Angel.",
+			"You must not move when he spawns...",
+			"I suggest you to stay still until he dissapeared",
+			"Good luck."
+		},
+
+		Cause = "Fallen Angel"
+	}
+})
 
 --------------------------------------------------
 -- ENTITY CALLBACKS
 --------------------------------------------------
 
 entity:SetCallback("OnSpawned", function()
-    print("Entity has spawned")
+
+	print("Fallen Angel has spawned")
+
+	-- Get the actual entity model
+	pcall(function()
+		currentEntityModel = entity.Model
+	end)
+
+	-- Reset state
+	fallenAngelActive = false
+
 end)
 
 entity:SetCallback("OnStartMoving", function()
-    print("Entity has started moving")
-    startFreezeCheck()
+
+	print("Fallen Angel has started moving")
+
+	-- Refresh model reference
+	pcall(function()
+		currentEntityModel = entity.Model
+	end)
+
+	startFreezeCheck()
+
 end)
 
 entity:SetCallback("OnEnterRoom", function(room: Model, firstTime: boolean)
- if firstTime == true then
-  print("Entity has entered room: ".. room.Name.. " for the first time")
- else
-  print("Entity has entered room: ".. room.Name.. " again")
- end
+
+	if firstTime then
+		print("Entity has entered room: " .. room.Name .. " for the first time")
+	else
+		print("Entity has entered room: " .. room.Name .. " again")
+	end
+
 end)
 
 entity:SetCallback("OnLookAt", function(lineOfSight: boolean)
- if lineOfSight == true then
-  print("Player is looking at entity")
- else
-  print("Player view is obstructed by something")
- end
+
+	if lineOfSight then
+		print("Player is looking at entity")
+	else
+		print("Player view is obstructed by something")
+	end
+
 end)
 
 entity:SetCallback("OnRebounding", function(startOfRebound: boolean)
- if startOfRebound == true then
-  print("Entity has started rebounding")
- else
-  print("Entity has finished rebounding")
- end
+
+	if startOfRebound then
+		print("Entity has started rebounding")
+	else
+		print("Entity has finished rebounding")
+	end
+
 end)
+
+--------------------------------------------------
+-- DESPAWNING
+--------------------------------------------------
 
 entity:SetCallback("OnDespawning", function()
- print("Entity is despawning")
+
+	print("Fallen Angel is despawning")
+
+	stopFreezeCheck()
+
 end)
+
+--------------------------------------------------
+-- DESPAWNED
+--------------------------------------------------
 
 entity:SetCallback("OnDespawned", function()
- print("Entity has despawned")
 
- -- Allow player to move again
- if movementCheck then
-  movementCheck:Disconnect()
-  movementCheck = nil
- end
+	print("Fallen Angel has despawned")
 
-local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
-        achievementGiver({
-            Title = "Just me its not angel.",
-            Desc = "Stop Moving",
-            Reason = "You Survived.",
-            Image = "rbxassetid://111970164409344"
-        })
+	stopFreezeCheck()
+
+	currentEntityModel = nil
+
+	local achievementGiver = loadstring(game:HttpGet(
+		"https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"
+	))()
+
+	achievementGiver({
+
+		Title = "Just me its not angel.",
+
+		Desc = "Stop Moving",
+
+		Reason = "You Survived.",
+
+		Image = "rbxassetid://111970164409344"
+
+	})
+
 end)
+
+--------------------------------------------------
+-- DAMAGE CALLBACK
+--------------------------------------------------
 
 entity:SetCallback("OnDamagePlayer", function(newHealth: number)
- if newHealth <= 0 then
-  print("Entity has killed the player")
- else
-  print("Entity has damaged the player")
- end
+
+	if newHealth <= 0 then
+		print("Entity has killed the player")
+	else
+		print("Entity has damaged the player")
+	end
+
 end)
 
----====== Run entity ======---
+--------------------------------------------------
+-- RUN ENTITY
+--------------------------------------------------
 
 entity:Run(true)
