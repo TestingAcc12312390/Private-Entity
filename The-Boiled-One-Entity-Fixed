@@ -122,7 +122,7 @@ local entity = Spawner:Create({
         Type = "Guiding",
 
         Hints = {
-            " You died to The Boiled One",
+            "You died to The Boiled One",
             "This entity is one of the scary phenomenon entity",
             "This entity might be scary when it spawned because of his sound playing at the start",
             "Hide when this happens!"
