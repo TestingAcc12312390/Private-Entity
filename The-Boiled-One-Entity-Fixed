@@ -73,7 +73,7 @@ local entity = Spawner:Create({
     Lights = {
         Flicker = {
             Enabled = true,
-            Duration = 100
+            Duration = 200
         },
 
         Shatter = true,
@@ -91,13 +91,13 @@ local entity = Spawner:Create({
     },
 
     Movement = {
-        Speed = 70,
+        Speed = 38,
         Delay = 1,
         Reversed = false
     },
 
     Rebounding = {
-        Enabled = true,
+        Enabled = false,
         Type = "Ambush",
         Min = 1,
         Max = 1,
@@ -123,7 +123,7 @@ local entity = Spawner:Create({
 
         Hints = {
             "You died to The Boiled One",
-            "This entity is one of the scary phenomenon entity",
+            "This entity is one of the scariest phenomenon entity",
             "This entity might be scary when it spawned because of his sound playing at the start",
             "Hide when this happens!"
         },
