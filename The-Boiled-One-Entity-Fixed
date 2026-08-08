@@ -108,8 +108,7 @@ local entity = Spawner:Create({
         Enabled = true,
         Range = 50,
         Amount = 125,
-
-        DeathDelay = 7.1
+        DeathDelay = 6.5
     },
 
     Crucifixion = {
@@ -224,6 +223,8 @@ entity:SetCallback("OnDamagePlayer", function(newHealth: number)
 
         local Players = game:GetService("Players")
         local TweenService = game:GetService("TweenService")
+        local ContentProvider = game:GetService("ContentProvider")
+        local RunService = game:GetService("RunService")
         local CoreGui = game:GetService("CoreGui")
 
         local player = Players.LocalPlayer
@@ -238,8 +239,11 @@ entity:SetCallback("OnDamagePlayer", function(newHealth: number)
         local SCREAM_SOUND =
             "rbxassetid://87290118952161"
 
-        local TALKING_MUSIC =
+        local TALKING_SOUND =
             "rbxassetid://119223589229162"
+
+        local STATIC_COUNT = 45
+        local GLITCH_COUNT = 8
 
         --==================================================
         -- REMOVE OLD GUI
@@ -257,27 +261,35 @@ entity:SetCallback("OnDamagePlayer", function(newHealth: number)
         end)
 
         --==================================================
-        -- GUI
+        -- SCREEN GUI
         --==================================================
 
         local gui = Instance.new("ScreenGui")
 
-        gui.Name = "BoiledOneJumpscare"
+        gui.Name =
+            "BoiledOneJumpscare"
+
         gui.IgnoreGuiInset = true
         gui.DisplayOrder = 999999
-        gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        gui.ZIndexBehavior =
+            Enum.ZIndexBehavior.Sibling
+
         gui.Parent = CoreGui
 
         --==================================================
         -- WHITE BACKGROUND
-        -- IMPORTANT:
-        -- THIS NEVER GETS DESTROYED DURING THE TRANSITION
         --==================================================
 
         local white = Instance.new("Frame")
 
-        white.Name = "PermanentWhiteBackground"
-        white.Size = UDim2.fromScale(1, 1)
+        white.Name =
+            "WhiteBackground"
+
+        white.Size =
+            UDim2.fromScale(1, 1)
+
+        white.Position =
+            UDim2.fromScale(0, 0)
 
         white.BackgroundColor3 =
             Color3.fromRGB(
@@ -288,126 +300,97 @@ entity:SetCallback("OnDamagePlayer", function(newHealth: number)
 
         white.BackgroundTransparency = 0
         white.BorderSizePixel = 0
+
         white.ZIndex = 1
         white.Parent = gui
 
         --==================================================
-        -- SCARY STATIC
+        -- STATIC CONTAINER
         --==================================================
 
-        local staticFolder = Instance.new("Folder")
+        local staticFolder = Instance.new("Frame")
 
-        staticFolder.Name = "Static"
+        staticFolder.Name =
+            "Static"
+
+        staticFolder.Size =
+            UDim2.fromScale(1, 1)
+
+        staticFolder.Position =
+            UDim2.fromScale(0, 0)
+
+        staticFolder.BackgroundTransparency = 1
+        staticFolder.BorderSizePixel = 0
+
+        staticFolder.ZIndex = 5
         staticFolder.Parent = gui
 
         --==================================================
-        -- STATIC BARS
+        -- STATIC LINES
         --==================================================
 
-        local staticBars = {}
+        local staticLines = {}
 
-        for i = 1, 300 do
+        for i = 1, STATIC_COUNT do
 
-            local bar = Instance.new("Frame")
+            local line =
+                Instance.new("Frame")
+
+            line.Name =
+                "StaticLine_" .. i
+
+            line.BorderSizePixel = 0
 
             local shade =
                 math.random(0, 255)
 
-            bar.BackgroundColor3 =
+            line.BackgroundColor3 =
                 Color3.fromRGB(
                     shade,
                     shade,
                     shade
                 )
 
-            bar.BackgroundTransparency =
-                math.random(0, 75) / 100
+            line.BackgroundTransparency =
+                math.random(20, 90) / 100
 
-            bar.BorderSizePixel = 0
-
-            bar.Size =
+            line.Size =
                 UDim2.new(
-                    math.random(1, 100) / 100,
+                    math.random(15, 100) / 100,
                     0,
                     0,
-                    math.random(1, 6)
+                    math.random(1, 5)
                 )
 
-            bar.Position =
+            line.Position =
                 UDim2.new(
-                    math.random(-20, 100) / 100,
+                    math.random(-15, 100) / 100,
                     0,
                     math.random(-15, 100) / 100,
                     0
                 )
 
-            bar.ZIndex = 5
-            bar.Parent = staticFolder
-
-            table.insert(
-                staticBars,
-                bar
-            )
-
-        end
-
-        --==================================================
-        -- THIN SCANLINES
-        --==================================================
-
-        local scanLines = {}
-
-        for i = 1, 100 do
-
-            local line = Instance.new("Frame")
-
-            line.BackgroundColor3 =
-                Color3.fromRGB(
-                    0,
-                    0,
-                    0
-                )
-
-            line.BackgroundTransparency =
-                math.random(55, 90) / 100
-
-            line.BorderSizePixel = 0
-
-            line.Size =
-                UDim2.new(
-                    1,
-                    0,
-                    0,
-                    math.random(1, 3)
-                )
-
-            line.Position =
-                UDim2.new(
-                    0,
-                    0,
-                    math.random(),
-                    0
-                )
-
-            line.ZIndex = 6
+            line.ZIndex = 5
             line.Parent = staticFolder
 
-            table.insert(
-                scanLines,
+            staticLines[#staticLines + 1] =
                 line
-            )
 
         end
 
         --==================================================
-        -- LARGE GLITCH BLOCKS
+        -- GLITCH BLOCKS
         --==================================================
 
         local glitchBlocks = {}
 
-        for i = 1, 55 do
+        for i = 1, GLITCH_COUNT do
 
-            local block = Instance.new("Frame")
+            local block =
+                Instance.new("Frame")
+
+            block.Name =
+                "Glitch_" .. i
 
             block.BorderSizePixel = 0
 
@@ -422,81 +405,130 @@ entity:SetCallback("OnDamagePlayer", function(newHealth: number)
                 )
 
             block.BackgroundTransparency =
-                math.random(10, 80) / 100
+                math.random(30, 90) / 100
 
             block.Size =
                 UDim2.new(
-                    math.random(2, 60) / 100,
+                    math.random(5, 60) / 100,
                     0,
-                    math.random(1, 18) / 100,
+                    math.random(2, 12) / 100,
                     0
                 )
 
             block.Position =
                 UDim2.new(
-                    math.random(-20, 100) / 100,
+                    math.random(-15, 100) / 100,
                     0,
                     math.random(-15, 100) / 100,
                     0
                 )
 
-            block.ZIndex = 7
+            block.ZIndex = 6
             block.Parent = staticFolder
 
-            table.insert(
-                glitchBlocks,
+            glitchBlocks[#glitchBlocks + 1] =
                 block
-            )
 
         end
 
         --==================================================
-        -- RED STATIC
+        -- BOILED ONE IMAGE
+        -- CREATED EARLY TO PRELOAD
         --==================================================
 
-        local redOverlay = Instance.new("Frame")
+        local boiledOne =
+            Instance.new("ImageLabel")
 
-        redOverlay.Size =
+        boiledOne.Name =
+            "BoiledOne"
+
+        boiledOne.AnchorPoint =
+            Vector2.new(0.5, 0.5)
+
+        boiledOne.Position =
+            UDim2.fromScale(
+                0.5,
+                0.5
+            )
+
+        boiledOne.Size =
+            UDim2.fromScale(
+                0.75,
+                0.75
+            )
+
+        boiledOne.BackgroundTransparency = 1
+
+        boiledOne.Image =
+            BOILED_ONE_IMAGE
+
+        boiledOne.ScaleType =
+            Enum.ScaleType.Fit
+
+        boiledOne.ImageTransparency = 0
+
+        boiledOne.Visible = false
+
+        boiledOne.ZIndex = 50
+
+        boiledOne.Parent = gui
+
+        --==================================================
+        -- PRELOAD IMAGE
+        --==================================================
+
+        task.spawn(function()
+
+            pcall(function()
+
+                ContentProvider:PreloadAsync({
+                    boiledOne
+                })
+
+            end)
+
+        end)
+
+        --==================================================
+        -- RED FLASH
+        --==================================================
+
+        local redFlash =
+            Instance.new("Frame")
+
+        redFlash.Name =
+            "RedFlash"
+
+        redFlash.Size =
             UDim2.fromScale(1, 1)
 
-        redOverlay.BackgroundColor3 =
+        redFlash.Position =
+            UDim2.fromScale(0, 0)
+
+        redFlash.BackgroundColor3 =
             Color3.fromRGB(
-                150,
+                255,
                 0,
                 0
             )
 
-        redOverlay.BackgroundTransparency = 0.94
-        redOverlay.BorderSizePixel = 0
-        redOverlay.ZIndex = 8
-        redOverlay.Parent = staticFolder
+        redFlash.BackgroundTransparency = 1
 
-        --==================================================
-        -- BLACK GLITCH FLASH
-        --==================================================
+        redFlash.BorderSizePixel = 0
 
-        local blackFlash = Instance.new("Frame")
+        redFlash.ZIndex = 100
 
-        blackFlash.Size =
-            UDim2.fromScale(1, 1)
-
-        blackFlash.BackgroundColor3 =
-            Color3.fromRGB(
-                0,
-                0,
-                0
-            )
-
-        blackFlash.BackgroundTransparency = 1
-        blackFlash.BorderSizePixel = 0
-        blackFlash.ZIndex = 9
-        blackFlash.Parent = staticFolder
+        redFlash.Parent = gui
 
         --==================================================
         -- DIALOGUE
         --==================================================
 
-        local dialogue = Instance.new("TextLabel")
+        local dialogue =
+            Instance.new("TextLabel")
+
+        dialogue.Name =
+            "Dialogue"
 
         dialogue.AnchorPoint =
             Vector2.new(0.5, 1)
@@ -505,7 +537,7 @@ entity:SetCallback("OnDamagePlayer", function(newHealth: number)
             UDim2.new(
                 0.5,
                 0,
-                0.93,
+                0.92,
                 0
             )
 
@@ -518,6 +550,7 @@ entity:SetCallback("OnDamagePlayer", function(newHealth: number)
             )
 
         dialogue.BackgroundTransparency = 1
+
         dialogue.Text = ""
 
         dialogue.TextColor3 =
@@ -535,94 +568,86 @@ entity:SetCallback("OnDamagePlayer", function(newHealth: number)
             )
 
         dialogue.TextStrokeTransparency = 0
+
         dialogue.TextScaled = true
 
         dialogue.Font =
             Enum.Font.Antique
 
-        dialogue.ZIndex = 50
+        dialogue.ZIndex = 30
+
         dialogue.Parent = gui
 
         --==================================================
-        -- TALKING MUSIC
+        -- TALKING SOUND
         --==================================================
 
-        local music = Instance.new("Sound")
+        local talking =
+            Instance.new("Sound")
 
-        music.SoundId =
-            TALKING_MUSIC
+        talking.Name =
+            "Talking"
 
-        music.Volume = 1.5
-        music.Looped = false
-        music.Parent = gui
+        talking.SoundId =
+            TALKING_SOUND
+
+        talking.Volume = 1.5
+        talking.Looped = false
+
+        talking.Parent = gui
+
+        pcall(function()
+            talking:Play()
+        end)
 
         --==================================================
-        -- START
+        -- CONTINUOUS STATIC
+        -- EVERY LINE UPDATES
         --==================================================
 
         local staticRunning = true
-
-        music:Play()
-
-        --==================================================
-        -- STATIC LOOP
-        --==================================================
 
         task.spawn(function()
 
             while staticRunning and gui.Parent do
 
-                -- STATIC BARS
-                for _, bar in ipairs(staticBars) do
+                for _, line in ipairs(staticLines) do
+
+                    if not staticRunning then
+                        break
+                    end
 
                     local shade =
                         math.random(0, 255)
 
-                    bar.BackgroundColor3 =
+                    line.BackgroundColor3 =
                         Color3.fromRGB(
                             shade,
                             shade,
                             shade
                         )
 
-                    bar.Position =
-                        UDim2.new(
-                            math.random(-25, 100) / 100,
-                            0,
-                            math.random(-20, 100) / 100,
-                            0
-                        )
-
-                    bar.Size =
-                        UDim2.new(
-                            math.random(1, 100) / 100,
-                            0,
-                            0,
-                            math.random(1, 10)
-                        )
-
-                    bar.BackgroundTransparency =
-                        math.random(0, 85) / 100
-
-                end
-
-                -- SCANLINES
-                for _, line in ipairs(scanLines) do
+                    line.BackgroundTransparency =
+                        math.random(5, 92) / 100
 
                     line.Position =
                         UDim2.new(
+                            math.random(-15, 100) / 100,
                             0,
-                            0,
-                            math.random(),
+                            math.random(-15, 100) / 100,
                             0
                         )
 
-                    line.BackgroundTransparency =
-                        math.random(45, 90) / 100
+                    line.Size =
+                        UDim2.new(
+                            math.random(15, 100) / 100,
+                            0,
+                            0,
+                            math.random(1, 6)
+                        )
 
                 end
 
-                -- GLITCH BLOCKS
                 for _, block in ipairs(glitchBlocks) do
 
                     local shade =
@@ -635,179 +660,66 @@ entity:SetCallback("OnDamagePlayer", function(newHealth: number)
                             shade
                         )
 
+                    block.BackgroundTransparency =
+                        math.random(10, 92) / 100
+
                     block.Position =
                         UDim2.new(
-                            math.random(-20, 100) / 100,
+                            math.random(-15, 100) / 100,
                             0,
-                            math.random(-20, 100) / 100,
+                            math.random(-15, 100) / 100,
                             0
                         )
 
-                    block.Size =
-                        UDim2.new(
-                            math.random(2, 70) / 100,
-                            0,
-                            math.random(1, 18) / 100,
-                            0
-                        )
-
-                    block.BackgroundTransparency =
-                        math.random(5, 90) / 100
-
                 end
 
-                -- RED FLASHES
-                if math.random(1, 5) == 1 then
-
-                    redOverlay.BackgroundTransparency =
-                        math.random(60, 88) / 100
-
-                else
-
-                    redOverlay.BackgroundTransparency =
-                        0.95
-
-                end
-
-                -- BLACK FLASHES
-                if math.random(1, 15) == 1 then
-
-                    blackFlash.BackgroundTransparency =
-                        math.random(60, 85) / 100
-
-                    task.wait(0.02)
-
-                    blackFlash.BackgroundTransparency = 1
-
-                end
-
-                -- EXTREME RED GLITCH
-                if math.random(1, 12) == 1 then
-
-                    for _, bar in ipairs(staticBars) do
-
-                        bar.BackgroundColor3 =
-                            Color3.fromRGB(
-                                math.random(100, 255),
-                                0,
-                                0
-                            )
-
-                    end
-
-                    task.wait(0.015)
-
-                end
-
-                task.wait(0.02)
+                task.wait(0.025)
 
             end
 
         end)
 
         --==================================================
-        -- FIRST DIALOGUE
+        -- DIALOGUE 1
         --==================================================
 
         task.wait(0.7)
 
+        if not gui.Parent then
+            return
+        end
+
         dialogue.Text =
             "I will be there"
 
-        dialogue.Position =
-            UDim2.new(
-                0.5,
-                math.random(-5, 5),
-                0.93,
-                math.random(-3, 3)
-            )
-
         --==================================================
-        -- SECOND DIALOGUE
+        -- DIALOGUE 2
         --==================================================
 
         task.wait(1.65)
 
+        if not gui.Parent then
+            return
+        end
+
         dialogue.Text =
             "and watch out over you"
 
-        dialogue.Position =
-            UDim2.new(
-                0.5,
-                math.random(-5, 5),
-                0.93,
-                math.random(-3, 3)
-            )
-
         --==================================================
-        -- WAIT
+        -- FINAL WAIT
         --==================================================
 
         task.wait(2.6)
 
-        --==================================================
-        -- STOP STATIC
-        --==================================================
-
-        staticRunning = false
-
-        pcall(function()
-            music:Stop()
-            music:Destroy()
-        end)
-
-        -- Hide dialogue BEFORE removing static
-        dialogue.Visible = false
+        if not gui.Parent then
+            return
+        end
 
         --==================================================
-        -- RED FLASH
-        -- WHITE BACKGROUND REMAINS PERMANENT
+        -- SHOW FINAL IMAGE
         --==================================================
 
-        -- Remove ONLY the static layer
-        pcall(function()
-            staticFolder:Destroy()
-        end)
-
-        -- Make sure white is still visible
-        white.Visible = true
-        white.BackgroundTransparency = 0
-
-        -- RED
-        white.BackgroundColor3 =
-            Color3.fromRGB(
-                255,
-                0,
-                0
-            )
-
-        task.wait(0.12)
-
-        --==================================================
-        -- RED FLASH ENDS
-        --==================================================
-
-        white.BackgroundColor3 =
-            Color3.fromRGB(
-                255,
-                255,
-                255
-            )
-
-        white.Visible = true
-        white.BackgroundTransparency = 0
-
-        --==================================================
-        -- BOILED ONE APPEARS AFTER RED FLASH
-        --==================================================
-
-        local boiledOne =
-            Instance.new("ImageLabel")
-
-        boiledOne.Name = "BoiledOneFinal"
-
-        boiledOne.AnchorPoint =
-            Vector2.new(0.5, 0.5)
+        boiledOne.Visible = true
 
         boiledOne.Position =
             UDim2.fromScale(
@@ -817,45 +729,92 @@ entity:SetCallback("OnDamagePlayer", function(newHealth: number)
 
         boiledOne.Size =
             UDim2.fromScale(
-                0.01,
-                0.01
+                0.75,
+                0.75
             )
 
-        boiledOne.BackgroundTransparency = 1
-
-        boiledOne.Image =
-            BOILED_ONE_IMAGE
-
-        boiledOne.ScaleType =
-            Enum.ScaleType.Fit
-
-        boiledOne.ZIndex = 100
-        boiledOne.Parent = gui
-
         --==================================================
-        -- SCREAM
+        -- SCREAM AT SAME TIME
         --==================================================
 
         local scream =
             Instance.new("Sound")
 
+        scream.Name =
+            "Scream"
+
         scream.SoundId =
             SCREAM_SOUND
 
         scream.Volume = 10
+        scream.Looped = false
+
         scream.Parent = gui
 
-        scream:Play()
+        pcall(function()
+            scream:Play()
+        end)
 
         --==================================================
-        -- FINAL IMAGE REVEAL
+        -- STOP STATIC + TEXT
+        --==================================================
+
+        staticRunning = false
+
+        staticFolder.Visible = false
+        dialogue.Visible = false
+
+        --==================================================
+        -- CONTINUOUS IMAGE SHAKE
+        --==================================================
+
+        local shaking = true
+
+        local shakeConnection
+
+        shakeConnection =
+            RunService.RenderStepped:Connect(function()
+
+                if not shaking
+                    or not gui.Parent
+                    or not boiledOne.Parent then
+
+                    if shakeConnection then
+
+                        shakeConnection:Disconnect()
+                        shakeConnection = nil
+
+                    end
+
+                    return
+                end
+
+                boiledOne.Position =
+                    UDim2.new(
+                        0.5,
+                        math.random(-24, 24),
+                        0.5,
+                        math.random(-24, 24)
+                    )
+
+                boiledOne.Rotation =
+                    math.random(
+                        -9,
+                        9
+                    )
+
+            end)
+
+        --==================================================
+        -- CLOSE ZOOM
         --==================================================
 
         TweenService:Create(
+
             boiledOne,
 
             TweenInfo.new(
-                0.08,
+                0.38,
                 Enum.EasingStyle.Back,
                 Enum.EasingDirection.Out
             ),
@@ -863,101 +822,88 @@ entity:SetCallback("OnDamagePlayer", function(newHealth: number)
             {
                 Size =
                     UDim2.fromScale(
-                        1.05,
-                        1.05
+                        1.15,
+                        1.15
                     )
             }
 
         ):Play()
 
         --==================================================
-        -- FINAL GLITCH EFFECT
+        -- BRIGHT RED FLASH
         --==================================================
 
         task.spawn(function()
 
-            for i = 1, 12 do
+            for i = 1, 14 do
 
                 if not gui.Parent then
                     break
                 end
 
-                boiledOne.Position =
-                    UDim2.new(
-                        0.5,
-                        math.random(-15, 15),
-                        0.5,
-                        math.random(-15, 15)
-                    )
+                -- BRIGHTER FLASH
+                redFlash.BackgroundTransparency =
+                    0.60
 
-                boiledOne.Rotation =
-                    math.random(-3, 3)
+                task.wait(0.04)
 
-                task.wait(0.025)
+                redFlash.BackgroundTransparency =
+                    0.84
+
+                task.wait(0.04)
 
             end
 
-            if boiledOne.Parent then
+            if redFlash.Parent then
 
-                boiledOne.Position =
-                    UDim2.fromScale(
-                        0.5,
-                        0.5
-                    )
-
-                boiledOne.Rotation = 0
+                redFlash.BackgroundTransparency =
+                    1
 
             end
 
         end)
 
         --==================================================
-        -- FINAL HOLD
+        -- KEEP JUMPSCARE
         --==================================================
 
         task.wait(1.5)
 
         --==================================================
-        -- KILL PLAYER
+        -- STOP SHAKE
         --==================================================
 
-        local character =
-            player.Character
+        shaking = false
 
-        if character then
+        if shakeConnection then
 
-            local humanoid =
-                character:FindFirstChildOfClass(
-                    "Humanoid"
-                )
-
-            if humanoid then
-                humanoid.Health = 0
-            end
+            shakeConnection:Disconnect()
+            shakeConnection = nil
 
         end
-
-        --==================================================
-        -- DEATH CAUSE
-        --==================================================
-
-        pcall(function()
-
-            game.ReplicatedStorage.GameStats[
-                "Player_" .. player.Name
-            ].Total.DeathCause.Value =
-                "The Boiled One"
-
-        end)
 
         --==================================================
         -- CLEANUP
         --==================================================
 
-        task.wait(0.5)
+        pcall(function()
+
+            scream:Stop()
+            scream:Destroy()
+
+        end)
 
         pcall(function()
+
+            talking:Stop()
+            talking:Destroy()
+
+        end)
+
+        pcall(function()
+
             gui:Destroy()
+
         end)
 
     else
@@ -967,14 +913,6 @@ entity:SetCallback("OnDamagePlayer", function(newHealth: number)
     end
 
 end)
-
---==================================================
--- CRUCIFIX CALLBACK
---==================================================
-
--- entity:SetCallback("CrucifixionOverwrite", function()
---     print("The Boiled One was crucified")
--- end)
 
 --==================================================
 -- RUN ENTITY
