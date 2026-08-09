@@ -201,7 +201,7 @@ end
 --// CONFIG (Báº N CÃ“ THá»‚ CHá»ˆNH)
 local config = {
  Image1 = "rbxassetid://11237420484",
- Image2 = "rbxassetid://11237420484",
+ Image2 = "rbxassetid://9065891619",
 
  Shake = true,
 
