@@ -201,12 +201,12 @@ end
 --// CONFIG (Báº N CÃ“ THá»‚ CHá»ˆNH)
 local config = {
  Image1 = "rbxassetid://11237420484",
- Image2 = "rbxassetid://9065891619",
+ Image2 = "rbxassetid://0",
 
  Shake = true,
 
  Sound1 = {6600188325, {Volume = 10}},
- Sound2 = {138072963204427, {Volume = 10}},
+ Sound2 = {138072963204427, {Volume = 8}},
 
  Flashing = {
   true,
