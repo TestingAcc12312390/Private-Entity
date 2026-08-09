@@ -91,7 +91,7 @@ Damage = {
 Enabled = true,
 Range = 50,
 Amount = 125,
-DeathDelay = 0.9
+DeathDelay = 0.8
 },
 Crucifixion = {
 Enabled = true,
@@ -206,7 +206,7 @@ local config = {
  Shake = true,
 
  Sound1 = {6600188325, {Volume = 10}},
- Sound2 = {18459521002, {Volume = 10}},
+ Sound2 = {138072963204427, {Volume = 10}},
 
  Flashing = {
   true,
