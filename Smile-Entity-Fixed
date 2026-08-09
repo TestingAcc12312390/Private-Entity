@@ -206,7 +206,7 @@ local config = {
  Shake = true,
 
  Sound1 = {6600188325, {Volume = 10}},
- Sound2 = {138072963204427, {Volume = 8}},
+ Sound2 = {138072963204427, {Volume = 10}},
 
  Flashing = {
   true,
