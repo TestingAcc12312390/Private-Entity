@@ -434,7 +434,7 @@ local entity = Spawner:Create({
    Duration = 1
   },
 
-  Shatter = true,
+  Shatter = false,
   Repair = false
  },
 
