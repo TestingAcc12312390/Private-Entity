@@ -42,7 +42,7 @@ Damage = {
 Enabled = true,
 Range = 70,
 Amount = 125,
-DeathDelay = 0.9
+DeathDelay = 0.8
 },
 Crucifixion = {
 Enabled = true,
