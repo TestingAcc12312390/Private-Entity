@@ -311,7 +311,7 @@ local function startFreezeCheck()
     -- You have 0.5 seconds to move into position
     local graceEnd = os.clock() + GRACE_TIME
 
-    -- Position that becomes locked after the 2 seconds
+    -- Position that becomes locked after the 0.5 seconds
     local lockedPosition = nil
 
     print("Fallen Angel movement check started.")
