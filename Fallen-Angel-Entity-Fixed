@@ -70,7 +70,7 @@ textLabel.Parent = gui
 
 -- Drop Shadow Stroke
 local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(35, 0, 0) -- Deep green outline for contrast
+stroke.Color = Color3.fromRGB(35, 0, 0) -- Deep red outline for contrast
 stroke.Thickness = 2.5
 stroke.Transparency = 0.2
 stroke.Parent = textLabel
