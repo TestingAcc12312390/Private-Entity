@@ -290,87 +290,130 @@ local function playFallenAngelJumpscare()
 end
 
 --------------------------------------------------
--- START FREEZE CHECK
+-- START MOVEMENT CHECK
 --------------------------------------------------
+
+local GRACE_TIME = 0.5
 
 local function startFreezeCheck()
 
- local character = player.Character or player.CharacterAdded:Wait()
- local humanoid = character:WaitForChild("Humanoid")
- local root = character:WaitForChild("HumanoidRootPart")
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+    local root = character:WaitForChild("HumanoidRootPart")
 
- fallenAngelActive = true
+    fallenAngelActive = true
 
- if movementCheck then
-  movementCheck:Disconnect()
-  movementCheck = nil
- end
+    if movementCheck then
+        movementCheck:Disconnect()
+        movementCheck = nil
+    end
 
- local lastPosition = root.Position
+    -- You have 0.5 seconds to move into position
+    local graceEnd = os.clock() + GRACE_TIME
 
- movementCheck = RunService.Heartbeat:Connect(function()
+    -- Position that becomes locked after the 2 seconds
+    local lockedPosition = nil
 
-  --------------------------------------------------
-  -- CRUCIFIED / BANISHED
-  --------------------------------------------------
+    print("Fallen Angel movement check started.")
+    print("You have 0.5 seconds to choose your position.")
 
-  if isBanished() then
+    movementCheck = RunService.Heartbeat:Connect(function()
 
-   print("Fallen Angel was crucified - movement allowed!")
+        --------------------------------------------------
+        -- CRUCIFIED / BANISHED
+        --------------------------------------------------
 
-   stopFreezeCheck()
+        if isBanished() then
+            print("Fallen Angel was crucified - movement allowed!")
+            stopFreezeCheck()
+            return
+        end
 
-   return
-  end
+        --------------------------------------------------
+        -- ENTITY NO LONGER ACTIVE
+        --------------------------------------------------
 
-  --------------------------------------------------
-  -- ENTITY NO LONGER ACTIVE
-  --------------------------------------------------
+        if not fallenAngelActive then
+            stopFreezeCheck()
+            return
+        end
 
-  if not fallenAngelActive then
-   stopFreezeCheck()
-   return
-  end
+        if not character.Parent or humanoid.Health <= 0 then
+            stopFreezeCheck()
+            return
+        end
 
-  if not character.Parent or humanoid.Health <= 0 then
-   stopFreezeCheck()
-   return
-  end
+        --------------------------------------------------
+        -- 0.5 SECOND MOVEMENT PERIOD
+        --------------------------------------------------
 
-  --------------------------------------------------
-  -- PLAYER MOVED
-  --------------------------------------------------
+        if os.clock() < graceEnd then
+            return
+        end
 
-  local currentPosition = root.Position
+        --------------------------------------------------
+        -- LOCK POSITION
+        --------------------------------------------------
 
-  if (currentPosition - lastPosition).Magnitude > 0.05 then
+        if lockedPosition == nil then
+            lockedPosition = root.Position
 
-   -- FINAL CRUCIFIX CHECK
-   if isBanished() then
-    stopFreezeCheck()
-    return
-   end
+            print("Position locked! Do not move.")
 
-   -- Death cause
-   pcall(function()
+            return
+        end
 
-    game.ReplicatedStorage.GameStats
-     ["Player_" .. player.Name]
-     .Total.DeathCause.Value = "Fallen Angel"
+        --------------------------------------------------
+        -- CHECK FOR MOVEMENT
+        --------------------------------------------------
 
-   end)
+        local distanceMoved =
+            (root.Position - lockedPosition).Magnitude
 
-   stopFreezeCheck()
+        if distanceMoved > 0.05 then
 
-   task.spawn(playFallenAngelJumpscare)
+            --------------------------------------------------
+            -- FINAL CRUCIFIX CHECK
+            --------------------------------------------------
 
-   humanoid.Health = 0
+            if isBanished() then
+                stopFreezeCheck()
+                return
+            end
 
-   return
-  end
+            print("Fallen Angel detected movement!")
 
-  lastPosition = currentPosition
- end)
+            --------------------------------------------------
+            -- DEATH CAUSE
+            --------------------------------------------------
+
+            pcall(function()
+                game.ReplicatedStorage.GameStats
+                    ["Player_" .. player.Name]
+                    .Total.DeathCause.Value = "Fallen Angel"
+            end)
+
+            --------------------------------------------------
+            -- STOP CHECK
+            --------------------------------------------------
+
+            stopFreezeCheck()
+
+            --------------------------------------------------
+            -- JUMPSCARE
+            --------------------------------------------------
+
+            task.spawn(playFallenAngelJumpscare)
+
+            --------------------------------------------------
+            -- KILL
+            --------------------------------------------------
+
+            humanoid.Health = 0
+
+            return
+        end
+    end)
 end
 
 --------------------------------------------------
