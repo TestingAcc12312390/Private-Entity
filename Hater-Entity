@@ -16,7 +16,7 @@ local DamagePerTick = 1 -- Deal 5 damage per second
 local DamageCooldown = 1 -- 1 second between damage
 
 -- Load Hater model
-local hater = game:GetObjects("rbxassetid://12266358809")[1]
+local hater = game:GetObjects("rbxassetid://114662098076129")[1]
 hater.Parent = game.Workspace
 hater.Name = "Hater"
 
