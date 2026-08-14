@@ -57,7 +57,7 @@ DeathDelay = 0.8
 },
 Crucifixion = {
 Enabled = true,
-Range = 70,
+Range = 60,
 Resist = false,
 Break = true
 },
