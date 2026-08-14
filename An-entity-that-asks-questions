@@ -1,0 +1,3204 @@
+-- THIS TOOK ME 2 DAYS TO MAKE, THIS IS STILL IN BETA SO DM ME IN DISCORD IF THERE AMY BUGS
+-- Discord Username = idkman06483
+
+--// QUESTIONER
+--// FULL ENCOUNTER
+--// AUTOMATIC CRUCIFIX
+--// 5 QUESTIONS
+--// FINAL RIDDLE
+--// UNDERGROUND SPAWN
+--// CONTROLLED RISE
+--// FRONT APPROACH
+--// QUESTION/RIDDLE TIMERS
+--// BLUE CRUCIFIX
+--// ONE-USE CRUCIFIX
+--// CRUCIFIX DIALOGUE
+--// SUCCESS DIALOGUE
+--// QUESTIONER DEATH CAUSE
+--// ACHIEVEMENTS
+
+--------------------------------------------------
+-- SERVICES
+--------------------------------------------------
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local PlayerRoot = Character:WaitForChild("HumanoidRootPart")
+
+--------------------------------------------------
+-- CONFIG
+--------------------------------------------------
+
+local ENTITY_ID = "rbxassetid://120279172526046"
+
+local QUESTIONS_PER_ENCOUNTER = 5
+
+local TOTAL_TIME = 60
+local RIDDLE_TIME = 10
+
+local UNDERGROUND_DEPTH = 35
+
+local RISE_DELAY = 2
+local RISE_TIME = 1.5
+
+local ROOM_MARGIN = 7
+local RANDOM_ATTEMPTS = 50
+
+local ENTITY_DISTANCE = 8
+local APPROACH_SPEED = 8
+
+local CRUCIFIX_DISTANCE = 20
+
+--------------------------------------------------
+-- MUSIC
+--------------------------------------------------
+
+local QUESTION_MUSIC_ID = "rbxassetid://9045635797"
+local RIDDLE_MUSIC_ID = "rbxassetid://125958413112229"
+
+local QUESTION_MUSIC_VOLUME = 5
+local RIDDLE_MUSIC_VOLUME = 5
+
+--------------------------------------------------
+-- QUESTIONS
+--------------------------------------------------
+
+local QUESTIONS = {
+	{"What is 5 + 7?", {"12"}, "EASY"},
+	{"What animal is known as man's best friend?", {"dog"}, "EASY"},
+	{"What planet do we live on?", {"earth"}, "EASY"},
+	{"What is 3 × 4?", {"12"}, "EASY"},
+	{"What color do you get when you mix red and white?", {"pink"}, "EASY"},
+
+	{"What is 17 × 6?", {"102"}, "MEDIUM"},
+	{"What is the capital of Japan?", {"tokyo"}, "MEDIUM"},
+	{"What is 25% of 240?", {"60"}, "MEDIUM"},
+	{"Which planet is known as the Red Planet?", {"mars"}, "MEDIUM"},
+	{"What number comes next? 2, 6, 12, 20, 30, ?", {"42"}, "MEDIUM"},
+
+	{"What is 19 × 23?", {"437"}, "HARD"},
+	{"What is the square root of 169?", {"13"}, "HARD"},
+	{"Which element has the chemical symbol Au?", {"gold"}, "HARD"},
+	{"What is 15² - 8²?", {"161"}, "HARD"},
+	{"What process do plants use to convert sunlight into energy?", {"photosynthesis"}, "HARD"},
+
+	{"What is 27 × 34?", {"918"}, "EXTREME"},
+	{"What is 12³?", {"1728"}, "EXTREME"},
+	{"What is the hardest natural substance on Earth?", {"diamond"}, "EXTREME"},
+	{"What is 45% of 680?", {"306"}, "EXTREME"},
+	{"Which planet has the shortest day in the Solar System?", {"jupiter"}, "EXTREME"},
+
+	{"What is 125 × 48?", {"6000"}, "INSANE"},
+	{"What is 17² + 19²?", {"650"}, "INSANE"},
+	{"Which planet rotates on its side?", {"uranus"}, "INSANE"},
+	{"What number comes next? 5, 11, 23, 47, 95, ?", {"191"}, "INSANE"},
+	{"What is the study of earthquakes called?", {"seismology"}, "INSANE"},
+
+	{"What is 37 × 46?", {"1702"}, "CRAZY"},
+	{"What is 9999 ÷ 33?", {"303"}, "CRAZY"},
+	{"What is the smallest country in the world?", {"vatican city"}, "CRAZY"},
+	{"What is 23² - 17²?", {"240"}, "CRAZY"},
+	{"What is the boundary around a black hole beyond which nothing can escape?", {"event horizon"}, "CRAZY"},
+
+	{"What is 123 × 456?", {"56088"}, "IMPOSSIBLE"},
+	{"What is 999²?", {"998001"}, "IMPOSSIBLE"},
+	{"Which particle carries the electromagnetic force?", {"photon"}, "IMPOSSIBLE"},
+	{"What is the only mammal capable of true sustained flight?", {"bat"}, "IMPOSSIBLE"},
+	{"What is the boundary surrounding a black hole beyond which light cannot escape?", {"event horizon"}, "IMPOSSIBLE"},
+}
+
+--------------------------------------------------
+-- RIDDLES
+--------------------------------------------------
+
+local RIDDLES = {
+	{"What has hands but cannot clap?", {"clock"}, "EASY"},
+	{"What gets wetter the more it dries?", {"towel"}, "MEDIUM"},
+	{"The more you take, the more you leave behind. What are they?", {"footsteps"}, "HARD"},
+	{"What disappears as soon as you say its name?", {"silence"}, "EXTREME"},
+	{"I have cities but no houses, forests but no trees, and water but no fish. What am I?", {"map"}, "INSANE"},
+	{"What word becomes shorter when you add two letters to it?", {"short"}, "CRAZY"},
+	{"What can you hold without ever touching or using your hands?", {"conversation"}, "IMPOSSIBLE"},
+}
+
+--------------------------------------------------
+-- STATE
+--------------------------------------------------
+
+local Entity
+
+local Dead = false
+local EncounterFinished = false
+local CrucifixInProgress = false
+local CrucifixMonitorRunning = false
+
+local QuestionsFinished = false
+local RiddleFinished = false
+
+local QuestionGui
+local RiddleGui
+local DialogueGui
+
+local DialogueBox
+local DialogueText
+local DialogueName
+
+local DialogueToken = 0
+
+local QuestionMusic
+local RiddleMusic
+
+local CurrentQuestion = 1
+local TimeLeft = TOTAL_TIME
+
+local SelectedQuestions = {}
+
+--------------------------------------------------
+-- HELPERS
+--------------------------------------------------
+
+local function Normalize(Text)
+	return string.lower(
+		tostring(Text or "")
+			:gsub("^%s*(.-)%s*$", "%1")
+	)
+end
+
+local function IsCorrect(Input, Data)
+	Input = Normalize(Input)
+
+	for _, Answer in ipairs(Data[2]) do
+		if Input == Normalize(Answer) then
+			return true
+		end
+	end
+
+	return false
+end
+
+local function Shuffle(Tab)
+	for i = #Tab, 2, -1 do
+		local j = math.random(1, i)
+		Tab[i], Tab[j] = Tab[j], Tab[i]
+	end
+end
+
+--------------------------------------------------
+-- QUESTIONER DEATH CAUSE
+--------------------------------------------------
+
+local function SetQuestionerDeathCause()
+	pcall(function()
+
+		local RemotesFolder =
+			ReplicatedStorage:FindFirstChild("RemotesFolder")
+
+		if RemotesFolder then
+
+			local DeathHint =
+				RemotesFolder:FindFirstChild("DeathHint")
+
+			if DeathHint then
+				firesignal(
+					DeathHint.OnClientEvent,
+					{
+						"You died to Questioner...",
+						"You need to be smart in order to survive him.",
+						"Answer all his questions and Riddle if you want to survive!"
+					},
+					"Blue"
+				)
+			end
+		end
+
+		local GameStats =
+			ReplicatedStorage:FindFirstChild("GameStats")
+
+		if not GameStats then
+			return
+		end
+
+		local PlayerStats =
+			GameStats:FindFirstChild("Player_" .. Player.Name)
+
+		if not PlayerStats then
+			return
+		end
+
+		local Total =
+			PlayerStats:FindFirstChild("Total")
+
+		if not Total then
+			return
+		end
+
+		local DeathCause =
+			Total:FindFirstChild("DeathCause")
+
+		if DeathCause then
+			DeathCause.Value = "Questioner"
+		end
+
+	end)
+end
+
+--------------------------------------------------
+-- LOAD ENTITY
+--------------------------------------------------
+
+do
+	local Success, Objects = pcall(function()
+		return game:GetObjects(ENTITY_ID)
+	end)
+
+	if not Success or not Objects or not Objects[1] then
+		warn("Questioner: failed to load entity.")
+		return
+	end
+
+	Entity = Objects[1]
+	Entity.Parent = nil
+end
+
+--------------------------------------------------
+-- ENTITY ROOT
+--------------------------------------------------
+
+local function GetRoot()
+
+	if not Entity or not Entity.Parent then
+		return nil
+	end
+
+	if Entity:IsA("BasePart") then
+		return Entity
+	end
+
+	if Entity:IsA("Model") then
+
+		if Entity.PrimaryPart then
+			return Entity.PrimaryPart
+		end
+
+		local Root =
+			Entity:FindFirstChild("HumanoidRootPart", true)
+			or Entity:FindFirstChild("RootPart", true)
+			or Entity:FindFirstChild("Main", true)
+			or Entity:FindFirstChildWhichIsA("BasePart", true)
+
+		if Root then
+			Entity.PrimaryPart = Root
+			return Root
+		end
+	end
+
+	return nil
+end
+
+--------------------------------------------------
+-- ANCHOR ENTITY
+--------------------------------------------------
+
+local function AnchorEntity()
+
+	if not Entity or not Entity.Parent then
+		return
+	end
+
+	local function Setup(Object)
+
+		if not Object:IsA("BasePart") then
+			return
+		end
+
+		Object.Anchored = true
+		Object.CanCollide = false
+		Object.CanTouch = false
+		Object.CanQuery = false
+
+		Object.AssemblyLinearVelocity = Vector3.zero
+		Object.AssemblyAngularVelocity = Vector3.zero
+	end
+
+	if Entity:IsA("BasePart") then
+		Setup(Entity)
+	else
+
+		for _, Object in ipairs(Entity:GetDescendants()) do
+			Setup(Object)
+		end
+
+	end
+end
+
+--------------------------------------------------
+-- ENTITY BOUNDS
+--------------------------------------------------
+
+local function GetEntityBounds()
+
+	if not Entity or not Entity.Parent then
+		return nil
+	end
+
+	local Success, CF, Size =
+		pcall(function()
+
+			local BoxCF, BoxSize =
+				Entity:GetBoundingBox()
+
+			return BoxCF, BoxSize
+		end)
+
+	if not Success then
+		return nil
+	end
+
+	return {
+		CF = CF,
+		Size = Size,
+		Top = CF.Position.Y + Size.Y / 2,
+		Bottom = CF.Position.Y - Size.Y / 2
+	}
+end
+
+--------------------------------------------------
+-- CURRENT ROOM
+--------------------------------------------------
+
+local function GetCurrentRoom()
+
+	local CurrentRooms =
+		workspace:FindFirstChild("CurrentRooms")
+
+	if not CurrentRooms then
+		return nil
+	end
+
+	local GameData =
+		ReplicatedStorage:FindFirstChild("GameData")
+
+	if not GameData then
+		return nil
+	end
+
+	local LatestRoom =
+		GameData:FindFirstChild("LatestRoom")
+
+	if not LatestRoom then
+		return nil
+	end
+
+	return CurrentRooms:FindFirstChild(
+		tostring(LatestRoom.Value)
+	)
+end
+
+--------------------------------------------------
+-- PLAYER FLOOR
+--------------------------------------------------
+
+local function GetPlayerFloor(Room)
+
+	if not Room then
+		return nil
+	end
+
+	local Params =
+		RaycastParams.new()
+
+	Params.FilterType =
+		Enum.RaycastFilterType.Exclude
+
+	Params.FilterDescendantsInstances = {
+		Character,
+		Entity
+	}
+
+	Params.IgnoreWater = true
+
+	local Position =
+		PlayerRoot.Position
+
+	local Result =
+		workspace:Raycast(
+			Vector3.new(
+				Position.X,
+				Position.Y + 3,
+				Position.Z
+			),
+			Vector3.new(0,-25,0),
+			Params
+		)
+
+	if Result
+		and Result.Instance
+		and Result.Instance:IsDescendantOf(Room)
+		and Result.Normal.Y > 0.7 then
+
+		return Result.Position.Y
+	end
+
+	local Result2 =
+		workspace:Raycast(
+			Vector3.new(
+				Position.X,
+				Position.Y + 8,
+				Position.Z
+			),
+			Vector3.new(0,-40,0),
+			Params
+		)
+
+	if Result2
+		and Result2.Instance
+		and Result2.Instance:IsDescendantOf(Room)
+		and Result2.Normal.Y > 0.7 then
+
+		return Result2.Position.Y
+	end
+
+	return nil
+end
+
+--------------------------------------------------
+-- RANDOM FLOOR POSITION
+--------------------------------------------------
+
+local function GetRandomFloorPosition(Room)
+
+	if not Room then
+		return nil,nil
+	end
+
+	local RoomCF, RoomSize =
+		Room:GetBoundingBox()
+
+	local HalfX =
+		math.max(
+			RoomSize.X / 2 - ROOM_MARGIN,
+			2
+		)
+
+	local HalfZ =
+		math.max(
+			RoomSize.Z / 2 - ROOM_MARGIN,
+			2
+		)
+
+	local PlayerFloor =
+		GetPlayerFloor(Room)
+
+	if not PlayerFloor then
+
+		PlayerFloor =
+			PlayerRoot.Position.Y -
+			(Humanoid.HipHeight + 2)
+	end
+
+	for _ = 1,RANDOM_ATTEMPTS do
+
+		local X =
+			(math.random() * 2 - 1) * HalfX
+
+		local Z =
+			(math.random() * 2 - 1) * HalfZ
+
+		local World =
+			RoomCF:PointToWorldSpace(
+				Vector3.new(X,0,Z)
+			)
+
+		local Params =
+			RaycastParams.new()
+
+		Params.FilterType =
+			Enum.RaycastFilterType.Exclude
+
+		Params.FilterDescendantsInstances = {
+			Character,
+			Entity
+		}
+
+		Params.IgnoreWater = true
+
+		local Result =
+			workspace:Raycast(
+				Vector3.new(
+					World.X,
+					PlayerFloor + 5,
+					World.Z
+				),
+				Vector3.new(0,-15,0),
+				Params
+			)
+
+		if Result
+			and Result.Instance
+			and Result.Instance:IsDescendantOf(Room)
+			and Result.Normal.Y > 0.7
+			and math.abs(
+				Result.Position.Y - PlayerFloor
+			) <= 5 then
+
+			return Vector3.new(
+				World.X,
+				PlayerFloor,
+				World.Z
+			),PlayerFloor
+		end
+	end
+
+	return Vector3.new(
+		RoomCF.Position.X,
+		PlayerFloor,
+		RoomCF.Position.Z
+	),PlayerFloor
+end
+
+--------------------------------------------------
+-- DIALOGUE UI
+--------------------------------------------------
+
+local function CreateDialogue()
+
+	if DialogueGui and DialogueGui.Parent then
+		return
+	end
+
+	DialogueGui =
+		Instance.new("ScreenGui")
+
+	DialogueGui.Name =
+		"QuestionerDialogue"
+
+	DialogueGui.ResetOnSpawn = false
+	DialogueGui.IgnoreGuiInset = true
+	DialogueGui.DisplayOrder = 200
+	DialogueGui.Parent = PlayerGui
+
+	DialogueBox =
+		Instance.new("Frame")
+
+	DialogueBox.AnchorPoint =
+		Vector2.new(0.5,0.5)
+
+	DialogueBox.Position =
+		UDim2.fromScale(0.5,0.82)
+
+	DialogueBox.Size =
+		UDim2.fromScale(0.68,0.14)
+
+	DialogueBox.BackgroundColor3 =
+		Color3.fromRGB(18,18,18)
+
+	DialogueBox.BackgroundTransparency =
+		0.08
+
+	DialogueBox.BorderSizePixel = 0
+	DialogueBox.Parent = DialogueGui
+
+	local Corner =
+		Instance.new("UICorner")
+
+	Corner.CornerRadius =
+		UDim.new(0,10)
+
+	Corner.Parent =
+		DialogueBox
+
+	DialogueName =
+		Instance.new("TextLabel")
+
+	DialogueName.Name =
+		"QuestionerName"
+
+	DialogueName.Position =
+		UDim2.fromScale(0.035,0.08)
+
+	DialogueName.Size =
+		UDim2.fromScale(0.9,0.25)
+
+	DialogueName.BackgroundTransparency = 1
+
+	DialogueName.Text =
+		"[Questioner]:"
+
+	DialogueName.TextColor3 =
+		Color3.fromRGB(220,220,220)
+
+	DialogueName.TextScaled = true
+
+	DialogueName.TextXAlignment =
+		Enum.TextXAlignment.Left
+
+	DialogueName.Font =
+		Enum.Font.GothamBold
+
+	DialogueName.Parent =
+		DialogueBox
+
+	DialogueText =
+		Instance.new("TextLabel")
+
+	DialogueText.Name =
+		"DialogueText"
+
+	DialogueText.Position =
+		UDim2.fromScale(0.035,0.34)
+
+	DialogueText.Size =
+		UDim2.fromScale(0.93,0.54)
+
+	DialogueText.BackgroundTransparency = 1
+
+	DialogueText.Text = ""
+
+	DialogueText.TextColor3 =
+		Color3.new(1,1,1)
+
+	DialogueText.TextScaled = true
+
+	DialogueText.TextWrapped = true
+
+	DialogueText.TextXAlignment =
+		Enum.TextXAlignment.Left
+
+	DialogueText.Font =
+		Enum.Font.Gotham
+
+	DialogueText.Parent =
+		DialogueBox
+end
+
+local function ShowDialogue()
+
+	CreateDialogue()
+
+	DialogueGui.Enabled = true
+	DialogueBox.Visible = true
+	DialogueText.Visible = true
+	DialogueName.Visible = true
+end
+
+local function HideDialogue()
+
+	DialogueToken += 1
+
+	if DialogueGui then
+		DialogueGui.Enabled = false
+	end
+
+	if DialogueText then
+		DialogueText.Text = ""
+	end
+end
+
+--------------------------------------------------
+-- NORMAL DIALOGUE
+--------------------------------------------------
+
+local function Dialogue(Message,Duration)
+
+	if Dead or EncounterFinished then
+		return false
+	end
+
+	DialogueToken += 1
+
+	local Token =
+		DialogueToken
+
+	ShowDialogue()
+
+	DialogueText.TextTransparency = 0
+	DialogueName.TextTransparency = 0
+	DialogueBox.BackgroundTransparency = 0.08
+
+	DialogueText.Text =
+		tostring(Message)
+
+	local Start =
+		os.clock()
+
+	while os.clock() - Start < Duration do
+
+		if Dead
+			or EncounterFinished
+			or Token ~= DialogueToken then
+
+			return false
+		end
+
+		RunService.RenderStepped:Wait()
+	end
+
+	return true
+end
+
+--------------------------------------------------
+-- FADE IN DIALOGUE
+--------------------------------------------------
+
+local function DialogueFadeIn(Message,Duration)
+
+	if Dead or EncounterFinished then
+		return false
+	end
+
+	DialogueToken += 1
+
+	local Token =
+		DialogueToken
+
+	ShowDialogue()
+
+	DialogueText.Text =
+		Message
+
+	DialogueText.TextTransparency = 1
+	DialogueName.TextTransparency = 1
+	DialogueBox.BackgroundTransparency = 1
+
+	local Info =
+		TweenInfo.new(
+			0.5,
+			Enum.EasingStyle.Quad,
+			Enum.EasingDirection.Out
+		)
+
+	local BoxTween =
+		TweenService:Create(
+			DialogueBox,
+			Info,
+			{
+				BackgroundTransparency = 0.08
+			}
+		)
+
+	local NameTween =
+		TweenService:Create(
+			DialogueName,
+			Info,
+			{
+				TextTransparency = 0
+			}
+		)
+
+	local TextTween =
+		TweenService:Create(
+			DialogueText,
+			Info,
+			{
+				TextTransparency = 0
+			}
+		)
+
+	BoxTween:Play()
+	NameTween:Play()
+	TextTween:Play()
+
+	local Start =
+		os.clock()
+
+	while os.clock() - Start < Duration do
+
+		if Dead
+			or EncounterFinished
+			or Token ~= DialogueToken then
+
+			return false
+		end
+
+		RunService.RenderStepped:Wait()
+	end
+
+	return true
+end
+
+--------------------------------------------------
+-- FADE OUT DIALOGUE
+--------------------------------------------------
+
+local function DialogueFadeOut(Message,Duration)
+
+	if Dead or EncounterFinished then
+		return false
+	end
+
+	DialogueToken += 1
+
+	local Token =
+		DialogueToken
+
+	ShowDialogue()
+
+	DialogueText.Text =
+		Message
+
+	DialogueText.TextTransparency = 0
+	DialogueName.TextTransparency = 0
+	DialogueBox.BackgroundTransparency = 0.08
+
+	local Info =
+		TweenInfo.new(
+			Duration,
+			Enum.EasingStyle.Quad,
+			Enum.EasingDirection.In
+		)
+
+	TweenService:Create(
+		DialogueBox,
+		Info,
+		{
+			BackgroundTransparency = 1
+		}
+	):Play()
+
+	TweenService:Create(
+		DialogueName,
+		Info,
+		{
+			TextTransparency = 1
+		}
+	):Play()
+
+	TweenService:Create(
+		DialogueText,
+		Info,
+		{
+			TextTransparency = 1
+		}
+	):Play()
+
+	local Start =
+		os.clock()
+
+	while os.clock() - Start < Duration do
+
+		if Dead
+			or Token ~= DialogueToken then
+
+			return false
+		end
+
+		RunService.RenderStepped:Wait()
+	end
+
+	return true
+end
+
+--------------------------------------------------
+-- CRUCIFIX FADE IN
+-- DOES NOT GET BLOCKED BY CRUCIFIXINPROGRESS
+--------------------------------------------------
+
+local function CrucifixFadeIn(Message,Duration)
+
+	if Dead or EncounterFinished then
+		return false
+	end
+
+	DialogueToken += 1
+
+	local Token =
+		DialogueToken
+
+	ShowDialogue()
+
+	DialogueText.Text =
+		Message
+
+	DialogueText.TextTransparency = 1
+	DialogueName.TextTransparency = 1
+	DialogueBox.BackgroundTransparency = 1
+
+	local Info =
+		TweenInfo.new(
+			0.5,
+			Enum.EasingStyle.Quad,
+			Enum.EasingDirection.Out
+		)
+
+	TweenService:Create(
+		DialogueBox,
+		Info,
+		{
+			BackgroundTransparency = 0.08
+		}
+	):Play()
+
+	TweenService:Create(
+		DialogueName,
+		Info,
+		{
+			TextTransparency = 0
+		}
+	):Play()
+
+	TweenService:Create(
+		DialogueText,
+		Info,
+		{
+			TextTransparency = 0
+		}
+	):Play()
+
+	local Start =
+		os.clock()
+
+	while os.clock() - Start < Duration do
+
+		if Dead
+			or EncounterFinished
+			or Token ~= DialogueToken then
+
+			return false
+		end
+
+		RunService.RenderStepped:Wait()
+	end
+
+	return true
+end
+
+--------------------------------------------------
+-- CRUCIFIX NORMAL DIALOGUE
+--------------------------------------------------
+
+local function CrucifixNormal(Message,Duration)
+
+	if Dead or EncounterFinished then
+		return false
+	end
+
+	DialogueToken += 1
+
+	local Token =
+		DialogueToken
+
+	ShowDialogue()
+
+	DialogueText.Text =
+		Message
+
+	DialogueText.TextTransparency = 0
+	DialogueName.TextTransparency = 0
+	DialogueBox.BackgroundTransparency = 0.08
+
+	local Start =
+		os.clock()
+
+	while os.clock() - Start < Duration do
+
+		if Dead
+			or EncounterFinished
+			or Token ~= DialogueToken then
+
+			return false
+		end
+
+		RunService.RenderStepped:Wait()
+	end
+
+	return true
+end
+
+--------------------------------------------------
+-- CRUCIFIX FADE OUT
+--------------------------------------------------
+
+local function CrucifixFadeOut(Message,Duration)
+
+	if Dead or EncounterFinished then
+		return false
+	end
+
+	DialogueToken += 1
+
+	local Token =
+		DialogueToken
+
+	ShowDialogue()
+
+	DialogueText.Text =
+		Message
+
+	DialogueText.TextTransparency = 0
+	DialogueName.TextTransparency = 0
+	DialogueBox.BackgroundTransparency = 0.08
+
+	local Info =
+		TweenInfo.new(
+			Duration,
+			Enum.EasingStyle.Quad,
+			Enum.EasingDirection.In
+		)
+
+	TweenService:Create(
+		DialogueBox,
+		Info,
+		{
+			BackgroundTransparency = 1
+		}
+	):Play()
+
+	TweenService:Create(
+		DialogueName,
+		Info,
+		{
+			TextTransparency = 1
+		}
+	):Play()
+
+	TweenService:Create(
+		DialogueText,
+		Info,
+		{
+			TextTransparency = 1
+		}
+	):Play()
+
+	local Start =
+		os.clock()
+
+	while os.clock() - Start < Duration do
+
+		if Dead
+			or Token ~= DialogueToken then
+
+			return false
+		end
+
+		RunService.RenderStepped:Wait()
+	end
+
+	return true
+end
+
+--------------------------------------------------
+-- DIALOGUE SEQUENCE
+--------------------------------------------------
+
+local function DialogueSequence(Messages)
+
+	for _,Data in ipairs(Messages) do
+
+		if Dead or EncounterFinished then
+			return false
+		end
+
+		if not Dialogue(Data[1],Data[2]) then
+			return false
+		end
+	end
+
+	return true
+end
+
+--------------------------------------------------
+-- MUSIC
+--------------------------------------------------
+
+local function StopMusic()
+
+	if QuestionMusic then
+
+		pcall(function()
+			QuestionMusic:Stop()
+		end)
+
+		QuestionMusic:Destroy()
+		QuestionMusic = nil
+	end
+
+	if RiddleMusic then
+
+		pcall(function()
+			RiddleMusic:Stop()
+		end)
+
+		RiddleMusic:Destroy()
+		RiddleMusic = nil
+	end
+end
+
+local function StartQuestionMusic()
+
+	StopMusic()
+
+	QuestionMusic =
+		Instance.new("Sound")
+
+	QuestionMusic.Name =
+		"QuestionerQuestionMusic"
+
+	QuestionMusic.SoundId =
+		QUESTION_MUSIC_ID
+
+	QuestionMusic.Volume =
+		QUESTION_MUSIC_VOLUME
+
+	QuestionMusic.Looped = true
+	QuestionMusic.Parent = PlayerGui
+
+	pcall(function()
+		QuestionMusic:Play()
+	end)
+end
+
+local function StartRiddleMusic()
+
+	StopMusic()
+
+	RiddleMusic =
+		Instance.new("Sound")
+
+	RiddleMusic.Name =
+		"QuestionerRiddleMusic"
+
+	RiddleMusic.SoundId =
+		RIDDLE_MUSIC_ID
+
+	RiddleMusic.Volume =
+		RIDDLE_MUSIC_VOLUME
+
+	RiddleMusic.Looped = true
+	RiddleMusic.Parent = PlayerGui
+
+	pcall(function()
+		RiddleMusic:Play()
+	end)
+end
+
+--------------------------------------------------
+-- PLAYER FREEZE
+--------------------------------------------------
+
+local OldWalkSpeed =
+	Humanoid.WalkSpeed
+
+local OldJumpPower =
+	Humanoid.JumpPower
+
+local OldAutoRotate =
+	Humanoid.AutoRotate
+
+local function FreezePlayer()
+
+	Humanoid.WalkSpeed = 0
+	Humanoid.JumpPower = 0
+	Humanoid.AutoRotate = false
+
+	PlayerRoot.Anchored = true
+
+	PlayerRoot.AssemblyLinearVelocity =
+		Vector3.zero
+
+	PlayerRoot.AssemblyAngularVelocity =
+		Vector3.zero
+end
+
+local function UnfreezePlayer()
+
+	if not Humanoid
+		or not Humanoid.Parent then
+		return
+	end
+
+	PlayerRoot.Anchored = false
+
+	Humanoid.WalkSpeed =
+		OldWalkSpeed
+
+	Humanoid.JumpPower =
+		OldJumpPower
+
+	Humanoid.AutoRotate =
+		OldAutoRotate
+end
+
+--------------------------------------------------
+-- CRUCIFIX FINDER
+--------------------------------------------------
+
+local function GetCrucifix()
+
+	Character =
+		Player.Character
+
+	if not Character then
+		return nil
+	end
+
+	for _,Object in ipairs(
+		Character:GetChildren()
+	) do
+
+		if Object:IsA("Tool")
+			and Normalize(Object.Name):find("crucifix") then
+
+			return Object
+		end
+	end
+
+	local Backpack =
+		Player:FindFirstChild("Backpack")
+
+	if Backpack then
+
+		for _,Object in ipairs(
+			Backpack:GetChildren()
+		) do
+
+			if Object:IsA("Tool")
+				and Normalize(Object.Name):find("crucifix") then
+
+				return Object
+			end
+		end
+	end
+
+	return nil
+end
+
+--------------------------------------------------
+-- ACHIEVEMENT
+--------------------------------------------------
+
+local function GiveAchievement(
+	Title,
+	Desc,
+	Reason,
+	Image
+)
+
+	pcall(function()
+
+		local Source =
+			game:HttpGet(
+				"https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"
+			)
+
+		local Loader =
+			loadstring(Source)
+
+		if not Loader then
+			return
+		end
+
+		local Achievement =
+			Loader()
+
+		if not Achievement then
+			return
+		end
+
+		Achievement({
+			Title = Title,
+			Desc = Desc,
+			Reason = Reason,
+			Image = Image
+		})
+	end)
+end
+
+--------------------------------------------------
+-- CLEANUP
+--------------------------------------------------
+
+local function DestroyDialogue()
+
+	DialogueToken += 1
+
+	if DialogueGui then
+
+		DialogueGui.Enabled = false
+		DialogueGui:Destroy()
+	end
+
+	DialogueGui = nil
+	DialogueBox = nil
+	DialogueText = nil
+	DialogueName = nil
+end
+
+local function DestroyQuestionUI()
+
+	if QuestionGui then
+		QuestionGui:Destroy()
+		QuestionGui = nil
+	end
+end
+
+local function DestroyRiddleUI()
+
+	if RiddleGui then
+		RiddleGui:Destroy()
+		RiddleGui = nil
+	end
+end
+
+--------------------------------------------------
+-- KILL
+--------------------------------------------------
+
+local function KillPlayer()
+
+	if Dead then
+		return
+	end
+
+	Dead = true
+
+	--------------------------------------------------
+	-- SET QUESTIONER DEATH INFORMATION FIRST
+	--------------------------------------------------
+
+	SetQuestionerDeathCause()
+
+	StopMusic()
+
+	DialogueToken += 1
+
+	DestroyQuestionUI()
+	DestroyRiddleUI()
+	DestroyDialogue()
+
+	UnfreezePlayer()
+
+	if Humanoid
+		and Humanoid.Parent then
+
+		Humanoid.Health = 0
+	end
+
+	if Entity
+		and Entity.Parent then
+
+		Entity:Destroy()
+	end
+end
+
+--------------------------------------------------
+-- SPAWN
+--------------------------------------------------
+
+local function SpawnQuestioner()
+
+	local Room =
+		GetCurrentRoom()
+
+	if not Room then
+
+		warn(
+			"Questioner: room not found."
+		)
+
+		return false
+	end
+
+	local SpawnPosition,FloorY =
+		GetRandomFloorPosition(Room)
+
+	if not SpawnPosition
+		or not FloorY then
+
+		return false
+	end
+
+	Entity.Parent =
+		workspace
+
+	AnchorEntity()
+
+	local CurrentPivot =
+		Entity:GetPivot()
+
+	local Rotation =
+		CurrentPivot -
+		CurrentPivot.Position
+
+	local Bounds =
+		GetEntityBounds()
+
+	if not Bounds then
+
+		Entity:Destroy()
+		return false
+	end
+
+	local UndergroundBottom =
+		FloorY -
+		UNDERGROUND_DEPTH
+
+	local UndergroundCenterY =
+		UndergroundBottom +
+		Bounds.Size.Y / 2
+
+	Entity:PivotTo(
+		CFrame.new(
+			SpawnPosition.X,
+			UndergroundCenterY,
+			SpawnPosition.Z
+		) * Rotation
+	)
+
+	AnchorEntity()
+
+	local Start =
+		os.clock()
+
+	while os.clock() - Start < RISE_DELAY do
+
+		if Dead
+			or not Entity
+			or not Entity.Parent then
+
+			return false
+		end
+
+		AnchorEntity()
+
+		RunService.RenderStepped:Wait()
+	end
+
+	Bounds =
+		GetEntityBounds()
+
+	if not Bounds then
+		return false
+	end
+
+	--------------------------------------------------
+	-- FIXED FLOOR RISE
+	--------------------------------------------------
+
+	local RiseDistance =
+		FloorY -
+		Bounds.Bottom
+
+	if RiseDistance < 0 then
+		RiseDistance = 0
+	end
+
+	local StartPivot =
+		Entity:GetPivot()
+
+	local TargetPivot =
+		StartPivot +
+		Vector3.new(
+			0,
+			RiseDistance,
+			0
+		)
+
+	local Value =
+		Instance.new("CFrameValue")
+
+	Value.Value =
+		StartPivot
+
+	local Connection =
+		Value:GetPropertyChangedSignal(
+			"Value"
+		):Connect(
+			function()
+
+				if Entity
+					and Entity.Parent then
+
+					Entity:PivotTo(
+						Value.Value
+					)
+
+					AnchorEntity()
+				end
+			end
+		)
+
+	local Tween =
+		TweenService:Create(
+			Value,
+			TweenInfo.new(
+				RISE_TIME,
+				Enum.EasingStyle.Quad,
+				Enum.EasingDirection.Out
+			),
+			{
+				Value = TargetPivot
+			}
+		)
+
+	Tween:Play()
+	Tween.Completed:Wait()
+
+	Connection:Disconnect()
+	Value:Destroy()
+
+	Bounds =
+		GetEntityBounds()
+
+	if Bounds then
+
+		local Correction =
+			FloorY -
+			Bounds.Bottom
+
+		Entity:PivotTo(
+			Entity:GetPivot() +
+			Vector3.new(
+				0,
+				Correction,
+				0
+			)
+		)
+	end
+
+	AnchorEntity()
+
+	FreezePlayer()
+
+	return true
+end
+
+--------------------------------------------------
+-- APPROACH
+--------------------------------------------------
+
+local function ApproachPlayer()
+
+	if Dead
+		or CrucifixInProgress then
+
+		return false
+	end
+
+	if not Entity
+		or not Entity.Parent then
+
+		return false
+	end
+
+	task.wait(0.5)
+
+	local LockedY =
+		Entity:GetPivot().Position.Y
+
+	local Target =
+		PlayerRoot.Position +
+		PlayerRoot.CFrame.LookVector *
+		ENTITY_DISTANCE
+
+	local TargetPosition =
+		Vector3.new(
+			Target.X,
+			LockedY,
+			Target.Z
+		)
+
+	while Entity
+		and Entity.Parent
+		and not Dead
+		and not CrucifixInProgress do
+
+		local Current =
+			Entity:GetPivot().Position
+
+		local Difference =
+			Vector3.new(
+				TargetPosition.X - Current.X,
+				0,
+				TargetPosition.Z - Current.Z
+			)
+
+		local Distance =
+			Difference.Magnitude
+
+		if Distance <= 0.2 then
+			break
+		end
+
+		local Delta =
+			RunService.RenderStepped:Wait()
+
+		local Step =
+			math.min(
+				APPROACH_SPEED * Delta,
+				Distance
+			)
+
+		local NewPosition =
+			Current +
+			Difference.Unit *
+			Step
+
+		NewPosition =
+			Vector3.new(
+				NewPosition.X,
+				LockedY,
+				NewPosition.Z
+			)
+
+		local Look =
+			PlayerRoot.Position -
+			NewPosition
+
+		Look =
+			Vector3.new(
+				Look.X,
+				0,
+				Look.Z
+			)
+
+		if Look.Magnitude < 0.01 then
+			Look =
+				Vector3.new(0,0,-1)
+		end
+
+		Entity:PivotTo(
+			CFrame.lookAt(
+				NewPosition,
+				NewPosition + Look.Unit
+			)
+		)
+
+		AnchorEntity()
+	end
+
+	return true
+end
+
+--------------------------------------------------
+-- BLUE CRUCIFIX
+--------------------------------------------------
+
+local function CreateBlueCrucifix()
+
+	local Root =
+		GetRoot()
+
+	if not Root then
+		return nil
+	end
+
+	local Model =
+		Instance.new("Model")
+
+	Model.Name =
+		"QuestionerCrucifix"
+
+	Model.Parent =
+		workspace
+
+	local Position =
+		Root.Position +
+		Vector3.new(0,2.2,0)
+
+	local Vertical =
+		Instance.new("Part")
+
+	Vertical.Size =
+		Vector3.new(
+			0.32,
+			4.8,
+			0.32
+		)
+
+	Vertical.Position =
+		Position
+
+	Vertical.Anchored = true
+	Vertical.CanCollide = false
+	Vertical.CanTouch = false
+	Vertical.CanQuery = false
+
+	Vertical.Material =
+		Enum.Material.Neon
+
+	Vertical.Color =
+		Color3.fromRGB(
+			55,
+			130,
+			255
+		)
+
+	Vertical.Parent =
+		Model
+
+	local Horizontal =
+		Instance.new("Part")
+
+	Horizontal.Size =
+		Vector3.new(
+			2.7,
+			0.32,
+			0.32
+		)
+
+	Horizontal.Position =
+		Position +
+		Vector3.new(
+			0,
+			0.55,
+			0
+		)
+
+	Horizontal.Anchored = true
+	Horizontal.CanCollide = false
+	Horizontal.CanTouch = false
+	Horizontal.CanQuery = false
+
+	Horizontal.Material =
+		Enum.Material.Neon
+
+	Horizontal.Color =
+		Color3.fromRGB(
+			55,
+			130,
+			255
+		)
+
+	Horizontal.Parent =
+		Model
+
+	local Light =
+		Instance.new("PointLight")
+
+	Light.Color =
+		Color3.fromRGB(
+			55,
+			130,
+			255
+		)
+
+	Light.Brightness = 4
+	Light.Range = 14
+
+	Light.Parent =
+		Vertical
+
+	return Model
+end
+
+--------------------------------------------------
+-- CRUCIFIX DIALOGUE
+--------------------------------------------------
+
+local function CrucifixDialogueSequence()
+
+	if Dead
+		or EncounterFinished then
+
+		return false
+	end
+
+	--------------------------------------------------
+	-- FADE IN
+	--------------------------------------------------
+
+	if not CrucifixFadeIn(
+		"I can't believe you actually really did this.",
+		2.2
+	) then
+
+		return false
+	end
+
+	--------------------------------------------------
+	-- NORMAL
+	--------------------------------------------------
+
+	if not CrucifixNormal(
+		"HELP, I DON'T WANNA BE CRUCIFIED",
+		2.5
+	) then
+
+		return false
+	end
+
+	--------------------------------------------------
+	-- FADE OUT
+	--------------------------------------------------
+
+	if not CrucifixFadeOut(
+		"NOOOOOOOOOOOOOOOOO",
+		2.2
+	) then
+
+		return false
+	end
+
+	return true
+end
+
+--------------------------------------------------
+-- CRUCIFY
+--------------------------------------------------
+
+local function Crucify(Tool)
+
+	if CrucifixInProgress
+		or Dead
+		or EncounterFinished then
+
+		return
+	end
+
+	if not Entity
+		or not Entity.Parent then
+
+		return
+	end
+
+	if not Tool
+		or not Tool:IsA("Tool")
+		or not Normalize(Tool.Name):find("crucifix") then
+
+		return
+	end
+
+	--------------------------------------------------
+	-- LOCK
+	--------------------------------------------------
+
+	CrucifixInProgress = true
+
+	DialogueToken += 1
+
+	StopMusic()
+
+	DestroyQuestionUI()
+	DestroyRiddleUI()
+
+	--------------------------------------------------
+	-- EQUIP
+	--------------------------------------------------
+
+	pcall(function()
+		Humanoid:EquipTool(Tool)
+	end)
+
+	task.wait(0.15)
+
+	--------------------------------------------------
+	-- ACTIVATE
+	--------------------------------------------------
+
+	pcall(function()
+		Tool:Activate()
+	end)
+
+	AnchorEntity()
+
+	--------------------------------------------------
+	-- BLUE CRUCIFIX
+	--------------------------------------------------
+
+	local BlueCrucifix =
+		CreateBlueCrucifix()
+
+	--------------------------------------------------
+	-- ENTITY SPEAKS
+	--------------------------------------------------
+
+	CrucifixDialogueSequence()
+
+	--------------------------------------------------
+	-- REMOVE BLUE CRUCIFIX
+	--------------------------------------------------
+
+	if BlueCrucifix
+		and BlueCrucifix.Parent then
+
+		BlueCrucifix:Destroy()
+	end
+
+	--------------------------------------------------
+	-- BANISH ENTITY
+	--------------------------------------------------
+
+	if Entity
+		and Entity.Parent then
+
+		AnchorEntity()
+
+		local Start =
+			Entity:GetPivot()
+
+		local Value =
+			Instance.new("CFrameValue")
+
+		Value.Value =
+			Start
+
+		local Connection =
+			Value:GetPropertyChangedSignal(
+				"Value"
+			):Connect(
+				function()
+
+					if Entity
+						and Entity.Parent then
+
+						Entity:PivotTo(
+							Value.Value
+						)
+
+						AnchorEntity()
+					end
+				end
+			)
+
+		local Tween =
+			TweenService:Create(
+				Value,
+				TweenInfo.new(
+					1.5,
+					Enum.EasingStyle.Quad,
+					Enum.EasingDirection.In
+				),
+				{
+					Value =
+						Start +
+						Vector3.new(
+							0,
+							-30,
+							0
+						)
+				}
+			)
+
+		Tween:Play()
+		Tween.Completed:Wait()
+
+		Connection:Disconnect()
+		Value:Destroy()
+	end
+
+	--------------------------------------------------
+	-- DESTROY ENTITY
+	--------------------------------------------------
+
+	if Entity
+		and Entity.Parent then
+
+		Entity:Destroy()
+	end
+
+	--------------------------------------------------
+	-- ONE USE
+	--------------------------------------------------
+
+	if Tool
+		and Tool.Parent then
+
+		pcall(function()
+			Tool:Destroy()
+		end)
+	end
+
+	--------------------------------------------------
+	-- ACHIEVEMENT
+	--------------------------------------------------
+
+	GiveAchievement(
+		"Bravest Person Alive",
+		"I never thought you actually did this.",
+		"Use a Crucifix against Questioner",
+		"rbxassetid://8738909464"
+	)
+
+	--------------------------------------------------
+	-- FINISH
+	--------------------------------------------------
+
+	EncounterFinished = true
+
+	StopMusic()
+
+	DestroyQuestionUI()
+	DestroyRiddleUI()
+	DestroyDialogue()
+
+	UnfreezePlayer()
+end
+
+--------------------------------------------------
+-- AUTOMATIC CRUCIFIX MONITOR
+--------------------------------------------------
+
+local function StartCrucifixMonitor()
+
+	if CrucifixMonitorRunning then
+		return
+	end
+
+	CrucifixMonitorRunning = true
+
+	task.spawn(function()
+
+		while not Dead
+			and not EncounterFinished
+			and not CrucifixInProgress
+			and Entity
+			and Entity.Parent do
+
+			task.wait(0.1)
+
+			if Dead
+				or EncounterFinished
+				or CrucifixInProgress then
+
+				break
+			end
+
+			local Tool =
+				GetCrucifix()
+
+			if not Tool then
+				continue
+			end
+
+			local Root =
+				GetRoot()
+
+			if not Root then
+				continue
+			end
+
+			local Distance =
+				(
+					PlayerRoot.Position -
+					Root.Position
+				).Magnitude
+
+			if Distance <=
+				CRUCIFIX_DISTANCE then
+
+				Crucify(Tool)
+
+				break
+			end
+		end
+
+		CrucifixMonitorRunning =
+			false
+	end)
+end
+
+--------------------------------------------------
+-- QUESTION UI
+--------------------------------------------------
+
+local function CreateQuestionUI()
+
+	HideDialogue()
+	DestroyQuestionUI()
+
+	local Gui =
+		Instance.new("ScreenGui")
+
+	Gui.Name =
+		"QuestionerQuestions"
+
+	Gui.ResetOnSpawn = false
+	Gui.IgnoreGuiInset = true
+	Gui.DisplayOrder = 50
+	Gui.Parent = PlayerGui
+
+	QuestionGui =
+		Gui
+
+	local Overlay =
+		Instance.new("Frame")
+
+	Overlay.Size =
+		UDim2.fromScale(1,1)
+
+	Overlay.BackgroundColor3 =
+		Color3.new(0,0,0)
+
+	Overlay.BackgroundTransparency =
+		0.45
+
+	Overlay.BorderSizePixel = 0
+	Overlay.Parent =
+		Gui
+
+	local Main =
+		Instance.new("Frame")
+
+	Main.AnchorPoint =
+		Vector2.new(0.5,0.5)
+
+	Main.Position =
+		UDim2.fromScale(0.5,0.5)
+
+	Main.Size =
+		UDim2.fromScale(0.46,0.44)
+
+	Main.BackgroundColor3 =
+		Color3.fromRGB(25,25,25)
+
+	Main.BackgroundTransparency =
+		0.08
+
+	Main.BorderSizePixel = 0
+	Main.Parent =
+		Gui
+
+	local Corner =
+		Instance.new("UICorner")
+
+	Corner.CornerRadius =
+		UDim.new(0,12)
+
+	Corner.Parent =
+		Main
+
+	local Title =
+		Instance.new("TextLabel")
+
+	Title.Size =
+		UDim2.fromScale(0.9,0.09)
+
+	Title.Position =
+		UDim2.fromScale(0.05,0.025)
+
+	Title.BackgroundTransparency = 1
+	Title.Text = "QUESTIONS"
+
+	Title.TextColor3 =
+		Color3.new(1,1,1)
+
+	Title.TextScaled = true
+	Title.Font =
+		Enum.Font.GothamBold
+
+	Title.Parent =
+		Main
+
+	local Counter =
+		Instance.new("TextLabel")
+
+	Counter.Size =
+		UDim2.fromScale(0.55,0.07)
+
+	Counter.Position =
+		UDim2.fromScale(0.05,0.11)
+
+	Counter.BackgroundTransparency = 1
+
+	Counter.TextColor3 =
+		Color3.fromRGB(220,220,220)
+
+	Counter.TextScaled = true
+
+	Counter.TextXAlignment =
+		Enum.TextXAlignment.Left
+
+	Counter.Font =
+		Enum.Font.GothamBold
+
+	Counter.Parent =
+		Main
+
+	local Difficulty =
+		Instance.new("TextLabel")
+
+	Difficulty.Size =
+		UDim2.fromScale(0.37,0.07)
+
+	Difficulty.Position =
+		UDim2.fromScale(0.58,0.11)
+
+	Difficulty.BackgroundTransparency = 1
+
+	Difficulty.TextColor3 =
+		Color3.new(1,1,1)
+
+	Difficulty.TextScaled = true
+
+	Difficulty.TextXAlignment =
+		Enum.TextXAlignment.Right
+
+	Difficulty.Font =
+		Enum.Font.GothamBold
+
+	Difficulty.Parent =
+		Main
+
+	local Timer =
+		Instance.new("TextLabel")
+
+	Timer.Size =
+		UDim2.fromScale(0.9,0.07)
+
+	Timer.Position =
+		UDim2.fromScale(0.05,0.18)
+
+	Timer.BackgroundTransparency = 1
+
+	Timer.TextColor3 =
+		Color3.new(1,1,1)
+
+	Timer.TextScaled = true
+
+	Timer.Font =
+		Enum.Font.GothamBold
+
+	Timer.Parent =
+		Main
+
+	local QuestionText =
+		Instance.new("TextLabel")
+
+	QuestionText.Size =
+		UDim2.fromScale(0.88,0.21)
+
+	QuestionText.Position =
+		UDim2.fromScale(0.06,0.27)
+
+	QuestionText.BackgroundTransparency = 1
+
+	QuestionText.TextColor3 =
+		Color3.new(1,1,1)
+
+	QuestionText.TextScaled = true
+	QuestionText.TextWrapped = true
+
+	QuestionText.Font =
+		Enum.Font.GothamBold
+
+	QuestionText.Parent =
+		Main
+
+	local Answer =
+		Instance.new("TextBox")
+
+	Answer.Size =
+		UDim2.fromScale(0.8,0.13)
+
+	Answer.Position =
+		UDim2.fromScale(0.1,0.54)
+
+	Answer.BackgroundColor3 =
+		Color3.fromRGB(45,45,45)
+
+	Answer.TextColor3 =
+		Color3.new(1,1,1)
+
+	Answer.PlaceholderColor3 =
+		Color3.fromRGB(170,170,170)
+
+	Answer.PlaceholderText =
+		"Type your answer..."
+
+	Answer.Text = ""
+
+	Answer.TextScaled = true
+
+	Answer.ClearTextOnFocus = false
+
+	Answer.Font =
+		Enum.Font.Gotham
+
+	Answer.Parent =
+		Main
+
+	local AnswerCorner =
+		Instance.new("UICorner")
+
+	AnswerCorner.CornerRadius =
+		UDim.new(0,8)
+
+	AnswerCorner.Parent =
+		Answer
+
+	local Submit =
+		Instance.new("TextButton")
+
+	Submit.Size =
+		UDim2.fromScale(0.5,0.13)
+
+	Submit.Position =
+		UDim2.fromScale(0.25,0.73)
+
+	Submit.Text =
+		"SUBMIT"
+
+	Submit.TextScaled = true
+
+	Submit.TextColor3 =
+		Color3.new(1,1,1)
+
+	Submit.BackgroundColor3 =
+		Color3.fromRGB(55,55,55)
+
+	Submit.Font =
+		Enum.Font.GothamBold
+
+	Submit.Parent =
+		Main
+
+	local SubmitCorner =
+		Instance.new("UICorner")
+
+	SubmitCorner.CornerRadius =
+		UDim.new(0,8)
+
+	SubmitCorner.Parent =
+		Submit
+
+	local function Update()
+
+		local Data =
+			SelectedQuestions[
+				CurrentQuestion
+			]
+
+		if not Data then
+			return
+		end
+
+		Counter.Text =
+			"QUESTION " ..
+			CurrentQuestion ..
+			"/" ..
+			QUESTIONS_PER_ENCOUNTER
+
+		Difficulty.Text =
+			"DIFFICULTY: " ..
+			Data[3]
+
+		Timer.Text =
+			"TIME: " ..
+			math.max(
+				TimeLeft,
+				0
+			)
+
+		Timer.TextColor3 =
+			TimeLeft <= 10
+			and Color3.fromRGB(
+				255,60,60
+			)
+			or Color3.new(1,1,1)
+
+		QuestionText.Text =
+			Data[1]
+
+		Answer.Text = ""
+	end
+
+	return {
+		Gui = Gui,
+		Answer = Answer,
+		Submit = Submit,
+		Update = Update,
+		QuestionText = QuestionText,
+		Timer = Timer
+	}
+end
+
+--------------------------------------------------
+-- FINAL RIDDLE
+--------------------------------------------------
+
+local function StartRiddle()
+
+	if Dead
+		or CrucifixInProgress
+		or EncounterFinished then
+
+		return
+	end
+
+	QuestionsFinished = true
+
+	DestroyQuestionUI()
+
+	HideDialogue()
+	StopMusic()
+
+	if not DialogueSequence({
+		{"Impressive.",1.5},
+		{"But I have one final riddle.",2},
+		{"Answer it correctly.",1.8}
+	}) then
+		return
+	end
+
+	HideDialogue()
+
+	local Riddle =
+		RIDDLES[
+			math.random(
+				1,
+				#RIDDLES
+			)
+		]
+
+	local Gui =
+		Instance.new("ScreenGui")
+
+	Gui.Name =
+		"QuestionerRiddle"
+
+	Gui.ResetOnSpawn = false
+	Gui.IgnoreGuiInset = true
+	Gui.DisplayOrder = 50
+	Gui.Parent = PlayerGui
+
+	RiddleGui =
+		Gui
+
+	local Overlay =
+		Instance.new("Frame")
+
+	Overlay.Size =
+		UDim2.fromScale(1,1)
+
+	Overlay.BackgroundColor3 =
+		Color3.new(0,0,0)
+
+	Overlay.BackgroundTransparency =
+		0.45
+
+	Overlay.BorderSizePixel = 0
+
+	Overlay.Parent =
+		Gui
+
+	local Main =
+		Instance.new("Frame")
+
+	Main.AnchorPoint =
+		Vector2.new(0.5,0.5)
+
+	Main.Position =
+		UDim2.fromScale(0.5,0.5)
+
+	Main.Size =
+		UDim2.fromScale(0.46,0.44)
+
+	Main.BackgroundColor3 =
+		Color3.fromRGB(25,25,25)
+
+	Main.BackgroundTransparency =
+		0.08
+
+	Main.BorderSizePixel = 0
+
+	Main.Parent =
+		Gui
+
+	local Corner =
+		Instance.new("UICorner")
+
+	Corner.CornerRadius =
+		UDim.new(0,12)
+
+	Corner.Parent =
+		Main
+
+	local Title =
+		Instance.new("TextLabel")
+
+	Title.Size =
+		UDim2.fromScale(0.9,0.09)
+
+	Title.Position =
+		UDim2.fromScale(0.05,0.025)
+
+	Title.BackgroundTransparency = 1
+
+	Title.Text =
+		"FINAL RIDDLE"
+
+	Title.TextColor3 =
+		Color3.new(1,1,1)
+
+	Title.TextScaled = true
+
+	Title.Font =
+		Enum.Font.GothamBold
+
+	Title.Parent =
+		Main
+
+	local Difficulty =
+		Instance.new("TextLabel")
+
+	Difficulty.Size =
+		UDim2.fromScale(0.9,0.07)
+
+	Difficulty.Position =
+		UDim2.fromScale(0.05,0.12)
+
+	Difficulty.BackgroundTransparency = 1
+
+	Difficulty.Text =
+		"DIFFICULTY: " ..
+		Riddle[3]
+
+	Difficulty.TextColor3 =
+		Color3.new(1,1,1)
+
+	Difficulty.TextScaled = true
+
+	Difficulty.Font =
+		Enum.Font.GothamBold
+
+	Difficulty.Parent =
+		Main
+
+	local Timer =
+		Instance.new("TextLabel")
+
+	Timer.Size =
+		UDim2.fromScale(0.9,0.07)
+
+	Timer.Position =
+		UDim2.fromScale(0.05,0.20)
+
+	Timer.BackgroundTransparency = 1
+
+	Timer.Text =
+		"TIME: " ..
+		RIDDLE_TIME
+
+	Timer.TextColor3 =
+		Color3.new(1,1,1)
+
+	Timer.TextScaled = true
+
+	Timer.Font =
+		Enum.Font.GothamBold
+
+	Timer.Parent =
+		Main
+
+	local RiddleText =
+		Instance.new("TextLabel")
+
+	RiddleText.Size =
+		UDim2.fromScale(0.88,0.20)
+
+	RiddleText.Position =
+		UDim2.fromScale(0.06,0.29)
+
+	RiddleText.BackgroundTransparency = 1
+
+	RiddleText.Text =
+		Riddle[1]
+
+	RiddleText.TextColor3 =
+		Color3.new(1,1,1)
+
+	RiddleText.TextScaled = true
+
+	RiddleText.TextWrapped = true
+
+	RiddleText.Font =
+		Enum.Font.GothamBold
+
+	RiddleText.Parent =
+		Main
+
+	local Answer =
+		Instance.new("TextBox")
+
+	Answer.Size =
+		UDim2.fromScale(0.8,0.13)
+
+	Answer.Position =
+		UDim2.fromScale(0.1,0.54)
+
+	Answer.BackgroundColor3 =
+		Color3.fromRGB(45,45,45)
+
+	Answer.TextColor3 =
+		Color3.new(1,1,1)
+
+	Answer.PlaceholderColor3 =
+		Color3.fromRGB(170,170,170)
+
+	Answer.PlaceholderText =
+		"Type your answer..."
+
+	Answer.Text = ""
+
+	Answer.TextScaled = true
+
+	Answer.ClearTextOnFocus = false
+
+	Answer.Font =
+		Enum.Font.Gotham
+
+	Answer.Parent =
+		Main
+
+	local AnswerCorner =
+		Instance.new("UICorner")
+
+	AnswerCorner.CornerRadius =
+		UDim.new(0,8)
+
+	AnswerCorner.Parent =
+		Answer
+
+	local Submit =
+		Instance.new("TextButton")
+
+	Submit.Size =
+		UDim2.fromScale(0.5,0.13)
+
+	Submit.Position =
+		UDim2.fromScale(0.25,0.73)
+
+	Submit.Text =
+		"SUBMIT"
+
+	Submit.TextScaled = true
+
+	Submit.TextColor3 =
+		Color3.new(1,1,1)
+
+	Submit.BackgroundColor3 =
+		Color3.fromRGB(55,55,55)
+
+	Submit.Font =
+		Enum.Font.GothamBold
+
+	Submit.Parent =
+		Main
+
+	local SubmitCorner =
+		Instance.new("UICorner")
+
+	SubmitCorner.CornerRadius =
+		UDim.new(0,8)
+
+	SubmitCorner.Parent =
+		Submit
+
+	StartRiddleMusic()
+
+	local Finished =
+		false
+
+	local Remaining =
+		RIDDLE_TIME
+
+	local function Complete()
+
+		if Finished
+			or Dead
+			or CrucifixInProgress
+			or EncounterFinished then
+
+			return
+		end
+
+		local Input =
+			Normalize(
+				Answer.Text
+			)
+
+		if Input == "" then
+			return
+		end
+
+		--------------------------------------------------
+		-- WRONG RIDDLE
+		--------------------------------------------------
+
+		if not IsCorrect(
+			Input,
+			Riddle
+		) then
+
+			Finished = true
+
+			RiddleText.Text =
+				"WRONG!"
+
+			task.wait(0.6)
+
+			DestroyRiddleUI()
+			StopMusic()
+
+			if not DialogueSequence({
+				{"Bro can't even solve a riddle",2}
+			}) then
+				return
+			end
+
+			KillPlayer()
+
+			return
+		end
+
+		--------------------------------------------------
+		-- CORRECT
+		--------------------------------------------------
+
+		Finished = true
+
+		RiddleText.Text =
+			"CORRECT!"
+
+		task.wait(0.8)
+
+		DestroyRiddleUI()
+		StopMusic()
+
+		--------------------------------------------------
+		-- SUCCESS MESSAGE 1
+		-- FADE IN
+		--------------------------------------------------
+
+		if not DialogueFadeIn(
+			"Congratulations on answering 5 Question and 1 Riddle.",
+			2.5
+		) then
+
+			return
+		end
+
+		--------------------------------------------------
+		-- SUCCESS MESSAGE 2
+		-- NORMAL
+		--------------------------------------------------
+
+		if not Dialogue(
+			"You are smarter than i thought.",
+			2.2
+		) then
+
+			return
+		end
+
+		--------------------------------------------------
+		-- SUCCESS MESSAGE 3
+		-- NORMAL
+		--------------------------------------------------
+
+		if not Dialogue(
+			"You may go.",
+			1.8
+		) then
+
+			return
+		end
+
+		--------------------------------------------------
+		-- SUCCESS MESSAGE 4
+		-- FADE OUT 2.2 SECONDS
+		--------------------------------------------------
+
+		if not DialogueFadeOut(
+			"See you later.",
+			2.2
+		) then
+
+			return
+		end
+
+		--------------------------------------------------
+		-- FINISH
+		--------------------------------------------------
+
+		RiddleFinished = true
+		EncounterFinished = true
+
+		GiveAchievement(
+			"Smartest Person Alive",
+			"You're smarter than i thought.",
+			"Encounter and Survive Questioner",
+			"rbxassetid://7567254565"
+		)
+
+		DestroyDialogue()
+
+		if Entity
+			and Entity.Parent then
+
+			Entity:Destroy()
+		end
+
+		UnfreezePlayer()
+	end
+
+	Submit.MouseButton1Click:Connect(
+		Complete
+	)
+
+	Answer.FocusLost:Connect(
+		function(EnterPressed)
+
+			if EnterPressed then
+				Complete()
+			end
+		end
+	)
+
+	task.spawn(function()
+
+		while Remaining > 0
+			and not Finished
+			and not Dead
+			and not CrucifixInProgress do
+
+			task.wait(1)
+
+			if Finished
+				or Dead
+				or CrucifixInProgress then
+
+				break
+			end
+
+			Remaining -= 1
+
+			if Timer
+				and Timer.Parent then
+
+				Timer.Text =
+					"TIME: " ..
+					math.max(
+						Remaining,
+						0
+					)
+
+				if Remaining <= 5 then
+
+					Timer.TextColor3 =
+						Color3.fromRGB(
+							255,
+							60,
+							60
+						)
+				end
+			end
+		end
+
+		if Remaining <= 0
+			and not Finished
+			and not Dead
+			and not CrucifixInProgress then
+
+			Finished = true
+
+			DestroyRiddleUI()
+			StopMusic()
+
+			if not DialogueSequence({
+				{"You are smart but still a failure",2}
+			}) then
+
+				return
+			end
+
+			KillPlayer()
+		end
+	end)
+end
+
+--------------------------------------------------
+-- SPAWN
+--------------------------------------------------
+
+if not SpawnQuestioner() then
+
+	if Entity
+		and Entity.Parent then
+
+		Entity:Destroy()
+	end
+
+	return
+end
+
+--------------------------------------------------
+-- APPROACH
+--------------------------------------------------
+
+if not ApproachPlayer() then
+
+	UnfreezePlayer()
+
+	if Entity
+		and Entity.Parent then
+
+		Entity:Destroy()
+	end
+
+	return
+end
+
+--------------------------------------------------
+-- START CRUCIFIX MONITOR
+--------------------------------------------------
+
+StartCrucifixMonitor()
+
+task.wait(0.2)
+
+if CrucifixInProgress
+	or EncounterFinished
+	or Dead then
+
+	return
+end
+
+--------------------------------------------------
+-- INTRO
+--------------------------------------------------
+
+if not DialogueFadeIn(
+	"Hello, Player.",
+	2
+) then
+
+	return
+end
+
+if not DialogueSequence({
+
+	{"I have some questions for you.",2},
+
+	{"You have 60 seconds to answer them all.",2.5},
+
+	{"Answer incorrectly and you will die.",2.5},
+
+	{"Good luck.",2}
+
+}) then
+
+	return
+end
+
+--------------------------------------------------
+-- SELECT QUESTIONS
+--------------------------------------------------
+
+local Pool = {}
+
+for _,Question in ipairs(
+	QUESTIONS
+) do
+
+	table.insert(
+		Pool,
+		Question
+	)
+end
+
+Shuffle(Pool)
+
+for i = 1,
+	QUESTIONS_PER_ENCOUNTER do
+
+	SelectedQuestions[i] =
+		Pool[i]
+end
+
+--------------------------------------------------
+-- QUESTION UI
+--------------------------------------------------
+
+local UI =
+	CreateQuestionUI()
+
+if not UI then
+	return
+end
+
+UI.Update()
+
+StartQuestionMusic()
+
+--------------------------------------------------
+-- CHECK QUESTION
+--------------------------------------------------
+
+local function CheckQuestion()
+
+	if Dead
+		or EncounterFinished
+		or CrucifixInProgress
+		or QuestionsFinished then
+
+		return
+	end
+
+	local Data =
+		SelectedQuestions[
+			CurrentQuestion
+		]
+
+	if not Data then
+		return
+	end
+
+	local Input =
+		Normalize(
+			UI.Answer.Text
+		)
+
+	if Input == "" then
+		return
+	end
+
+	--------------------------------------------------
+	-- WRONG
+	--------------------------------------------------
+
+	if not IsCorrect(
+		Input,
+		Data
+	) then
+
+		UI.QuestionText.Text =
+			"WRONG ANSWER!"
+
+		task.wait(0.6)
+
+		DestroyQuestionUI()
+		StopMusic()
+
+		if not DialogueSequence({
+			{"Yeah, you are dumb",2}
+		}) then
+
+			return
+		end
+
+		KillPlayer()
+
+		return
+	end
+
+	--------------------------------------------------
+	-- NEXT
+	--------------------------------------------------
+
+	if CurrentQuestion <
+		QUESTIONS_PER_ENCOUNTER then
+
+		CurrentQuestion += 1
+
+		UI.Update()
+
+	else
+
+		StartRiddle()
+	end
+end
+
+--------------------------------------------------
+-- SUBMIT
+--------------------------------------------------
+
+UI.Submit.MouseButton1Click:Connect(
+	CheckQuestion
+)
+
+UI.Answer.FocusLost:Connect(
+	function(EnterPressed)
+
+		if EnterPressed then
+			CheckQuestion()
+		end
+	end
+)
+
+--------------------------------------------------
+-- QUESTION TIMER
+--------------------------------------------------
+
+task.spawn(function()
+
+	while TimeLeft > 0
+		and not Dead
+		and not EncounterFinished
+		and not QuestionsFinished
+		and not CrucifixInProgress do
+
+		task.wait(1)
+
+		if Dead
+			or EncounterFinished
+			or QuestionsFinished
+			or CrucifixInProgress then
+
+			break
+		end
+
+		TimeLeft -= 1
+
+		if UI.Timer
+			and UI.Timer.Parent then
+
+			UI.Timer.Text =
+				"TIME: " ..
+				math.max(
+					TimeLeft,
+					0
+				)
+
+			if TimeLeft <= 10 then
+
+				UI.Timer.TextColor3 =
+					Color3.fromRGB(
+						255,
+						60,
+						60
+					)
+
+			else
+
+				UI.Timer.TextColor3 =
+					Color3.new(
+						1,
+						1,
+						1
+					)
+			end
+		end
+	end
+
+	--------------------------------------------------
+	-- TIMER FAILURE
+	--------------------------------------------------
+
+	if TimeLeft <= 0
+		and not Dead
+		and not EncounterFinished
+		and not QuestionsFinished
+		and not CrucifixInProgress then
+
+		DestroyQuestionUI()
+		StopMusic()
+
+		if not DialogueSequence({
+			{"Well, you're a failure",2}
+		}) then
+
+			return
+		end
+
+		KillPlayer()
+	end
+end)
