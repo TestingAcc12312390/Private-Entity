@@ -1,0 +1,1007 @@
+--//========================================================
+--// CH4S3R_THRE4T
+--// FULL ENTITY SCRIPT
+--// HEIGHT OFFSET = 1
+--// SPEED = 20
+--// CHASE MUSIC
+--// MUSIC STOPS ON DESPAWN / CRUCIFIX
+--// ACHIEVEMENT APPEARS WHEN DESPAWNING STARTS
+--// NO GETGENV
+--//========================================================
+
+
+---====== LOAD SPAWNER ======---
+
+local Spawner = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/idkman60093/Doors-Modes/refs/heads/main/Entity%20Spawner%20V2"
+))()
+
+
+---====== SERVICES ======---
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+
+
+---====== SOUND ======---
+
+local cue2 = nil
+
+
+---====== ACHIEVEMENT ======---
+
+local achievementGiver = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"
+))()
+
+
+local Ch4s3rThre4tAchievementExecuted = false
+
+
+---====== DISPLAY ACHIEVEMENT ======---
+
+local function GiveCh4s3rThreatAchievement()
+
+    if Ch4s3rThre4tAchievementExecuted then
+        return
+    end
+
+    Ch4s3rThre4tAchievementExecuted = true
+
+    task.spawn(function()
+
+        task.wait(0.15)
+
+        local success, err = pcall(function()
+
+            achievementGiver({
+
+                Title = "???????????",
+
+                Desc = "Come here :)",
+
+                Reason = "Encounter Ch4s3r_Thre4t",
+
+                Image = "rbxassetid://73629873132008"
+
+            })
+
+        end)
+
+        if success then
+
+            print(
+                "Ch4s3r_Thre4t achievement displayed!"
+            )
+
+        else
+
+            warn(
+                "Ch4s3r_Thre4t achievement failed:",
+                err
+            )
+
+            Ch4s3rThre4tAchievementExecuted = false
+
+        end
+
+    end)
+
+end
+
+
+---====== STOP MUSIC ======---
+
+local function StopCh4s3rThreatSound()
+
+    if cue2 then
+
+        pcall(function()
+            cue2:Stop()
+        end)
+
+        pcall(function()
+            cue2:Destroy()
+        end)
+
+        cue2 = nil
+
+    end
+
+end
+
+
+---====== CREATE ENTITY ======---
+
+local entity = Spawner:Create({
+
+    Entity = {
+
+        Name = "Ch4s3r_Thre4t",
+
+        Asset = "rbxassetid://16596150898",
+
+        HeightOffset = 1
+
+    },
+
+
+    Lights = {
+
+        Flicker = {
+
+            Enabled = true,
+
+            Duration = 200
+
+        },
+
+        Shatter = true,
+
+        Repair = false
+
+    },
+
+
+    Earthquake = {
+
+        Enabled = false
+
+    },
+
+
+    CameraShake = {
+
+        Enabled = true,
+
+        Range = 100,
+
+        Values = {
+
+            1.5,
+
+            20,
+
+            0.1,
+
+            1
+
+        }
+
+    },
+
+
+    Movement = {
+
+        Speed = 20,
+
+        Delay = 0.5,
+
+        Reversed = false
+
+    },
+
+
+    Rebounding = {
+
+        Enabled = false,
+
+        Type = "Ambush",
+
+        Min = 1,
+
+        Max = 1,
+
+        Delay = 2
+
+    },
+
+
+    Damage = {
+
+        Enabled = true,
+
+        Range = 40,
+
+        Amount = 125
+
+    },
+
+
+    Crucifixion = {
+
+        Enabled = true,
+
+        Range = 60,
+
+        Resist = false,
+
+        Break = true
+
+    },
+
+
+    Death = {
+
+        Type = "Guiding",
+
+        Hints = {
+
+            "You died to Ch4s3r_Thre4t",
+
+            "It cannot see you.",
+
+            "But it knows where you are.",
+
+            "Run as fast as you can!"
+
+        },
+
+        Cause = "Ch4s3r_Thre4t"
+
+    }
+
+})
+
+
+---====== ON SPAWNED ======---
+
+entity:SetCallback("OnSpawned", function()
+
+    print(
+        "Ch4s3r_Thre4t has spawned"
+    )
+
+
+    -- Reset achievement for this encounter
+    Ch4s3rThre4tAchievementExecuted = false
+
+
+    -- Remove previous music
+    StopCh4s3rThreatSound()
+
+
+    --====================================================
+    -- CREATE CHASE MUSIC
+    --====================================================
+
+    cue2 = Instance.new("Sound")
+
+    cue2.Name =
+        "Ch4s3rThreat_ChaseMusic"
+
+    cue2.SoundId =
+        "rbxassetid://119285499667468"
+
+    cue2.Volume =
+        2
+
+    cue2.PlaybackSpeed =
+        1
+
+    cue2.Looped =
+        true
+
+    cue2.Parent =
+        workspace
+
+    cue2:Play()
+
+
+    --====================================================
+    -- WATCH ENTITY
+    --====================================================
+
+    task.spawn(function()
+
+        while cue2 do
+
+            task.wait(0.05)
+
+            if not cue2 then
+                break
+            end
+
+
+            local foundEntity = false
+
+
+            for _, obj in ipairs(
+                workspace:GetDescendants()
+            ) do
+
+                if obj.Name == "Ch4s3r_Thre4t" then
+
+                    foundEntity = true
+
+                    break
+
+                end
+
+            end
+
+
+            if not foundEntity then
+
+                print(
+                    "Ch4s3r_Thre4t disappeared from Workspace"
+                )
+
+
+                -- STOP MUSIC
+                StopCh4s3rThreatSound()
+
+
+                break
+
+            end
+
+        end
+
+    end)
+
+end)
+
+
+---====== ON START MOVING ======---
+
+entity:SetCallback("OnStartMoving", function()
+
+    print(
+        "Ch4s3r_Thre4t has started moving"
+    )
+
+end)
+
+
+---====== ON ENTER ROOM ======---
+
+entity:SetCallback(
+    "OnEnterRoom",
+    function(room: Model, firstTime: boolean)
+
+        if firstTime == true then
+
+            print(
+                "Ch4s3r_Thre4t entered room: "
+                .. room.Name
+                .. " for the first time"
+            )
+
+        else
+
+            print(
+                "Ch4s3r_Thre4t entered room: "
+                .. room.Name
+                .. " again"
+            )
+
+        end
+
+    end
+)
+
+
+---====== ON LOOK AT ======---
+
+entity:SetCallback(
+    "OnLookAt",
+    function(lineOfSight: boolean)
+
+        if lineOfSight == true then
+
+            print(
+                "Player is looking at Ch4s3r_Thre4t"
+            )
+
+        else
+
+            print(
+                "Player view is obstructed"
+            )
+
+        end
+
+    end
+)
+
+
+---====== ON REBOUNDING ======---
+
+entity:SetCallback(
+    "OnRebounding",
+    function(startOfRebound: boolean)
+
+        if startOfRebound == true then
+
+            print(
+                "Ch4s3r_Thre4t has started rebounding"
+            )
+
+        else
+
+            print(
+                "Ch4s3r_Thre4t has finished rebounding"
+            )
+
+        end
+
+    end
+)
+
+
+---====== ON DESPAWNING ======---
+
+entity:SetCallback("OnDespawning", function()
+
+    print(
+        "Ch4s3r_Thre4t is ABOUT TO DESPAWN"
+    )
+
+
+    --====================================================
+    -- STOP MUSIC IMMEDIATELY
+    --====================================================
+
+    StopCh4s3rThreatSound()
+
+
+    --====================================================
+    -- ACHIEVEMENT
+    --====================================================
+
+    GiveCh4s3rThreatAchievement()
+
+end)
+
+
+---====== ON FULLY DESPAWNED ======---
+
+entity:SetCallback("OnDespawned", function()
+
+    print(
+        "Ch4s3r_Thre4t has FULLY DESPAWNED"
+    )
+
+
+    -- Backup music cleanup
+    StopCh4s3rThreatSound()
+
+end)
+
+
+---====== ON DAMAGE PLAYER ======---
+
+entity:SetCallback(
+    "OnDamagePlayer",
+    function(newHealth: number)
+
+        if newHealth <= 0 then
+
+            print(
+                "Ch4s3r_Thre4t has killed the player"
+            )
+
+
+            --================================================
+            -- PLAYER
+            --================================================
+
+            local player =
+                Players.LocalPlayer
+
+            local character =
+                player.Character
+                or player.CharacterAdded:Wait()
+
+
+            --================================================
+            -- REMOVE OLD GUI
+            --================================================
+
+            pcall(function()
+
+                local oldGui =
+                    CoreGui:FindFirstChild(
+                        "JumpscareGui"
+                    )
+
+                if oldGui then
+                    oldGui:Destroy()
+                end
+
+            end)
+
+
+            --================================================
+            -- SOUND LOADER
+            --================================================
+
+            local function loadSound(data)
+
+                local sound =
+                    Instance.new("Sound")
+
+                local id =
+                    tostring(data[1])
+
+                local props =
+                    data[2] or {}
+
+
+                for k, v in pairs(props) do
+
+                    if k ~= "SoundId"
+                        and k ~= "Parent" then
+
+                        sound[k] = v
+
+                    end
+
+                end
+
+
+                if id:find("rbxasset://") then
+
+                    sound.SoundId = id
+
+                else
+
+                    sound.SoundId =
+                        "rbxassetid://"
+                        .. id:gsub("%D", "")
+
+                end
+
+
+                sound.Parent =
+                    workspace
+
+
+                return sound
+
+            end
+
+
+            --================================================
+            -- JUMPSCARE CONFIG
+            --================================================
+
+            local config = {
+
+                Image1 =
+                    "rbxassetid://132446402744462",
+
+                Image2 =
+                    "rbxassetid://140463852528264",
+
+                Shake = true,
+
+
+                Sound1 = {
+
+                    0,
+
+                    {
+                        Volume = 10
+                    }
+
+                },
+
+
+                Sound2 = {
+
+                    100490320577689,
+
+                    {
+                        Volume = 5
+                    }
+
+                },
+
+
+                Flashing = {
+
+                    true,
+
+                    Color3.fromRGB(
+                        255,
+                        0,
+                        0
+                    )
+
+                },
+
+
+                Tease = {
+
+                    false,
+
+                    Min = 1,
+
+                    Max = 3
+
+                }
+
+            }
+
+
+            --================================================
+            -- CREATE GUI
+            --================================================
+
+            local gui =
+                Instance.new("ScreenGui")
+
+            gui.Name =
+                "JumpscareGui"
+
+            gui.IgnoreGuiInset =
+                true
+
+            gui.ZIndexBehavior =
+                Enum.ZIndexBehavior.Sibling
+
+            gui.Parent =
+                CoreGui
+
+
+            --================================================
+            -- BACKGROUND
+            --================================================
+
+            local bg =
+                Instance.new("Frame")
+
+            bg.Size =
+                UDim2.new(
+                    1,
+                    0,
+                    1,
+                    0
+                )
+
+            bg.BackgroundColor3 =
+                Color3.new(
+                    0,
+                    0,
+                    0
+                )
+
+            bg.BorderSizePixel =
+                0
+
+            bg.BackgroundTransparency =
+                0
+
+            bg.ZIndex =
+                999
+
+            bg.Parent =
+                gui
+
+
+            --================================================
+            -- FACE
+            --================================================
+
+            local face =
+                Instance.new("ImageLabel")
+
+            face.AnchorPoint =
+                Vector2.new(
+                    0.5,
+                    0.5
+                )
+
+            face.Position =
+                UDim2.new(
+                    0.5,
+                    0,
+                    0.5,
+                    0
+                )
+
+            face.Size =
+                UDim2.new(
+                    0,
+                    150,
+                    0,
+                    150
+                )
+
+            face.BackgroundTransparency =
+                1
+
+            face.Image =
+                config.Image1
+
+            face.ResampleMode =
+                Enum.ResamplerMode.Pixelated
+
+            face.Parent =
+                bg
+
+
+            --================================================
+            -- SCREEN SIZE
+            --================================================
+
+            local screenY =
+                gui.AbsoluteSize.Y
+
+            local minSize =
+                screenY / 5
+
+            local maxSize =
+                screenY / 2.5
+
+
+            --================================================
+            -- JUMPSCARE SOUNDS
+            --================================================
+
+            local sound1
+            local sound2
+
+
+            if config.Sound1 then
+
+                sound1 =
+                    loadSound(
+                        config.Sound1
+                    )
+
+            end
+
+
+            if config.Sound2 then
+
+                sound2 =
+                    loadSound(
+                        config.Sound2
+                    )
+
+            end
+
+
+            --================================================
+            -- TEASE
+            --================================================
+
+            if config.Tease
+                and config.Tease[1] then
+
+                local loops =
+                    math.random(
+                        config.Tease.Min,
+                        config.Tease.Max
+                    )
+
+
+                if sound1 then
+                    sound1:Play()
+                end
+
+
+                for _ = 1, loops do
+
+                    task.wait(
+                        math.random(
+                            10,
+                            20
+                        ) / 100
+                    )
+
+
+                    local grow =
+                        (
+                            maxSize
+                            - minSize
+                        ) / loops
+
+
+                    face.Size =
+                        face.Size
+                        + UDim2.new(
+                            0,
+                            grow,
+                            0,
+                            grow
+                        )
+
+                end
+
+            end
+
+
+            --================================================
+            -- RED FLASHING
+            --================================================
+
+            if config.Flashing
+                and config.Flashing[1] then
+
+                task.spawn(function()
+
+                    while gui.Parent do
+
+                        bg.BackgroundColor3 =
+                            config.Flashing[2]
+
+
+                        task.wait(
+                            math.random(
+                                25,
+                                100
+                            ) / 1000
+                        )
+
+
+                        bg.BackgroundColor3 =
+                            Color3.new(
+                                0,
+                                0,
+                                0
+                            )
+
+
+                        task.wait(
+                            math.random(
+                                25,
+                                100
+                            ) / 1000
+                        )
+
+                    end
+
+                end)
+
+            end
+
+
+            --================================================
+            -- SHAKE
+            --================================================
+
+            if config.Shake then
+
+                task.spawn(function()
+
+                    local basePos =
+                        face.Position
+
+
+                    while gui.Parent do
+
+                        face.Position =
+                            basePos
+                            + UDim2.new(
+                                0,
+                                math.random(
+                                    -10,
+                                    10
+                                ),
+                                0,
+                                math.random(
+                                    -10,
+                                    10
+                                )
+                            )
+
+
+                        face.Rotation =
+                            math.random(
+                                -5,
+                                5
+                            )
+
+
+                        task.wait()
+
+                    end
+
+                end)
+
+            end
+
+
+            --================================================
+            -- FINAL JUMPSCARE
+            --================================================
+
+            face.Image =
+                config.Image2
+
+
+            face.Size =
+                UDim2.new(
+                    0,
+                    maxSize,
+                    0,
+                    maxSize
+                )
+
+
+            if sound2 then
+                sound2:Play()
+            end
+
+
+            TweenService:Create(
+
+                face,
+
+                TweenInfo.new(
+                    0.75
+                ),
+
+                {
+
+                    Size =
+                        UDim2.new(
+                            0,
+                            screenY * 3,
+                            0,
+                            screenY * 3
+                        ),
+
+                    ImageTransparency =
+                        0.5
+
+                }
+
+            ):Play()
+
+
+            task.wait(0.75)
+
+
+            --================================================
+            -- CLEANUP
+            --================================================
+
+            gui:Destroy()
+
+
+            if sound1 then
+                sound1:Destroy()
+            end
+
+
+            if sound2 then
+                sound2:Destroy()
+            end
+
+
+            --================================================
+            -- DEATH CAUSE
+            --================================================
+
+            pcall(function()
+
+                game.ReplicatedStorage.GameStats[
+                    "Player_" .. player.Name
+                ]
+                .Total.DeathCause.Value =
+                    "Ch4s3r_Thre4t"
+
+            end)
+
+
+        else
+
+            print(
+                "Ch4s3r_Thre4t damaged the player"
+            )
+
+        end
+
+    end
+)
+
+
+---====== RUN ENTITY ======---
+
+entity:Run(true)
