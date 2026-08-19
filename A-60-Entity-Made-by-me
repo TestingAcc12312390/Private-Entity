@@ -9,6 +9,7 @@
 --// Custom jumpscare
 --// DeathDelay = 11.8
 --// Achievement on despawning
+--// EXTREME CAMERA SHAKE
 --//========================================================
 
 
@@ -59,22 +60,17 @@ local DEATH_DELAY = 11.8
 
 local FIRST_DIALOGUE_DELAY = 3
 
--- Delay AFTER each dialogue message
 local NORMAL_DIALOGUE_DELAY = 6
 
--- Dialogue only fades OUT
 local DIALOGUE_VISIBLE_TIME = 2
 local DIALOGUE_FADE_OUT = 1
 
--- Jumpscare
 local FIRST_JUMPSCARE_TEXT_DELAY = 1.5
 local JUMPSCARE_WORD_DELAY = 2
 local JUMPSCARE_LINE_COUNT = 3
 
--- Darkness fade-in
 local DARKNESS_FADE_TIME = 2.5
 
--- Darkness fade-out
 local DARKNESS_FADE_OUT_TIME = 2.5
 
 
@@ -88,7 +84,6 @@ local DialogueRunning = false
 local JumpscareRunning = false
 local FinalJumpscareStarted = false
 
--- Prevent achievement from being given more than once
 local BadgeGiven = false
 
 
@@ -181,11 +176,6 @@ local function MakeDark()
 		return
 	end
 
-
-	--====================================================
-	-- START FROM CURRENT/NORMAL LIGHTING
-	--====================================================
-
 	Lighting.Brightness =
 		OriginalBrightness
 
@@ -202,20 +192,11 @@ local function MakeDark()
 	Atmosphere.Density = 0
 	Atmosphere.Haze = 0
 
-
-	--====================================================
-	-- ROOM SETTINGS
-	--====================================================
-
 	Lighting.ClockTime = 0
 
 	Lighting.FogStart = 5
 	Lighting.FogEnd = 55
 
-
-	--====================================================
-	-- DARKNESS TARGET
-	--====================================================
 
 	local DarkTween =
 		TweenService:Create(
@@ -248,10 +229,6 @@ local function MakeDark()
 		)
 
 
-	--====================================================
-	-- COLOR DARKNESS
-	--====================================================
-
 	local ColorTween =
 		TweenService:Create(
 
@@ -270,10 +247,6 @@ local function MakeDark()
 			}
 		)
 
-
-	--====================================================
-	-- ATMOSPHERE DARKNESS
-	--====================================================
 
 	local AtmosphereTween =
 		TweenService:Create(
@@ -303,8 +276,6 @@ end
 --//========================================================
 --// DARKNESS FADE-OUT
 --//========================================================
---// Called when the entity is ABOUT TO DESPAWN.
---// Everything smoothly returns to the original lighting.
 
 local function FadeOutDarkness()
 
@@ -314,10 +285,6 @@ local function FadeOutDarkness()
 		return
 	end
 
-
-	--====================================================
-	-- RESTORE CLOCK / FOG IMMEDIATELY
-	--====================================================
 
 	local ClockTween =
 		TweenService:Create(
@@ -352,10 +319,6 @@ local function FadeOutDarkness()
 		)
 
 
-	--====================================================
-	-- COLOR CORRECTION FADE OUT
-	--====================================================
-
 	local ColorFadeOut =
 		TweenService:Create(
 
@@ -374,10 +337,6 @@ local function FadeOutDarkness()
 			}
 		)
 
-
-	--====================================================
-	-- ATMOSPHERE FADE OUT
-	--====================================================
 
 	local AtmosphereFadeOut =
 		TweenService:Create(
@@ -432,7 +391,6 @@ local function RestoreLighting()
 	ColorCorrection.Brightness = 0
 	ColorCorrection.Contrast = 0
 	ColorCorrection.Saturation = 0
-
 
 	Atmosphere.Density = 0
 	Atmosphere.Haze = 0
@@ -1089,7 +1047,7 @@ end
 
 
 --//========================================================
---// CAMERA SHAKE
+--// EXTREME CAMERA SHAKE
 --//========================================================
 
 local function BrutalCameraShake(Duration)
@@ -1114,9 +1072,17 @@ local function BrutalCameraShake(Duration)
 		end
 
 
-		local Strength =
-			2.5
+		--================================================
+		-- EXTREME BASE STRENGTH
+		--================================================
 
+		local Strength =
+			5.5
+
+
+		--================================================
+		-- POSITION SHAKE
+		--================================================
 
 		local X =
 			math.random(
@@ -1142,11 +1108,15 @@ local function BrutalCameraShake(Duration)
 			* Strength
 
 
+		--================================================
+		-- EXTREME ROTATION
+		--================================================
+
 		local RX =
 			math.rad(
 				math.random(
-					-25,
-					25
+					-55,
+					55
 				)
 			)
 
@@ -1154,8 +1124,8 @@ local function BrutalCameraShake(Duration)
 		local RY =
 			math.rad(
 				math.random(
-					-25,
-					25
+					-55,
+					55
 				)
 			)
 
@@ -1163,8 +1133,8 @@ local function BrutalCameraShake(Duration)
 		local RZ =
 			math.rad(
 				math.random(
-					-25,
-					25
+					-55,
+					55
 				)
 			)
 
@@ -1182,6 +1152,75 @@ local function BrutalCameraShake(Duration)
 				RZ
 			)
 
+
+		--================================================
+		-- RANDOM HEAVY IMPACT
+		--================================================
+
+		if math.random(
+			1,
+			12
+		) == 1 then
+
+
+			local ImpactStrength =
+				9
+
+
+			Camera.CFrame =
+				Camera.CFrame
+				* CFrame.new(
+
+					math.random(
+						-100,
+						100
+					) / 100
+					* ImpactStrength,
+
+					math.random(
+						-100,
+						100
+					) / 100
+					* ImpactStrength,
+
+					math.random(
+						-100,
+						100
+					) / 100
+					* ImpactStrength
+
+				)
+				* CFrame.Angles(
+
+					math.rad(
+						math.random(
+							-80,
+							80
+						)
+					),
+
+					math.rad(
+						math.random(
+							-80,
+							80
+						)
+					),
+
+					math.rad(
+						math.random(
+							-80,
+							80
+						)
+					)
+
+				)
+
+		end
+
+
+		--================================================
+		-- VERY FAST UPDATE
+		--================================================
 
 		RunService.RenderStepped:Wait()
 
@@ -1326,6 +1365,10 @@ local function DoJumpscare()
 	end
 
 
+	--====================================================
+	-- RED FLASH
+	--====================================================
+
 	Background.BackgroundColor3 =
 		Color3.fromRGB(
 			130,
@@ -1352,6 +1395,10 @@ local function DoJumpscare()
 	)
 
 
+	--====================================================
+	-- FACE INITIAL POSITION
+	--====================================================
+
 	Face.ImageTransparency =
 		1
 
@@ -1374,6 +1421,10 @@ local function DoJumpscare()
 	Face.ImageTransparency =
 		0
 
+
+	--====================================================
+	-- FACE ZOOM
+	--====================================================
 
 	local Zoom =
 		TweenService:Create(
@@ -1400,6 +1451,10 @@ local function DoJumpscare()
 	Zoom:Play()
 
 
+	--====================================================
+	-- PLAY SCREAM
+	--====================================================
+
 	Scream:Stop()
 
 	Scream.TimePosition =
@@ -1420,6 +1475,10 @@ local function DoJumpscare()
 	end
 
 
+	--====================================================
+	-- EXTREME CAMERA SHAKE
+	--====================================================
+
 	task.spawn(function()
 
 		BrutalCameraShake(
@@ -1428,6 +1487,10 @@ local function DoJumpscare()
 
 	end)
 
+
+	--====================================================
+	-- FACE SHAKE
+	--====================================================
 
 	local FaceShakeStart =
 		tick()
@@ -1441,7 +1504,10 @@ local function DoJumpscare()
 		end
 
 
-		if math.random(1, 5) == 1 then
+		if math.random(
+			1,
+			5
+		) == 1 then
 
 			Background.BackgroundColor3 =
 				Color3.fromRGB(
@@ -1513,7 +1579,10 @@ local function DoJumpscare()
 			)
 
 
-		if math.random(1, 7) == 1 then
+		if math.random(
+			1,
+			7
+		) == 1 then
 
 			Face.ImageTransparency =
 				0.65
@@ -1530,7 +1599,10 @@ local function DoJumpscare()
 		end
 
 
-		if math.random(1, 35) == 1 then
+		if math.random(
+			1,
+			35
+		) == 1 then
 
 			Face.Size =
 				UDim2.fromScale(
@@ -1559,6 +1631,10 @@ local function DoJumpscare()
 
 	end
 
+
+	--====================================================
+	-- RESET JUMPSCARE
+	--====================================================
 
 	Face.Position =
 		UDim2.fromScale(
@@ -1776,21 +1852,12 @@ entity:SetCallback(
 		FinalJumpscareStarted =
 			false
 
-		-- Allow achievement again for a new spawn
 		BadgeGiven =
 			false
 
 
-		--================================================
-		-- FADE ROOM INTO DARKNESS
-		--================================================
-
 		MakeDark()
 
-
-		--================================================
-		-- START LOOPED MUSIC
-		--================================================
 
 		Music.PlaybackSpeed =
 			1
@@ -1803,10 +1870,6 @@ entity:SetCallback(
 			Music:Play()
 		end
 
-
-		--================================================
-		-- START DIALOGUE
-		--================================================
 
 		StartDialogue()
 
@@ -1968,9 +2031,6 @@ entity:SetCallback(
 --//========================================================
 --// ON DESPAWNING
 --//========================================================
---// Entity is ABOUT TO disappear here.
---// Achievement appears here.
---// Darkness begins fading out here.
 
 entity:SetCallback(
 	"OnDespawning",
@@ -2078,7 +2138,6 @@ entity:SetCallback(
 			true
 
 
-		-- Make absolutely sure lighting is restored
 		RestoreLighting()
 
 
