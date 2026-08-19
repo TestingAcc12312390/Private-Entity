@@ -1,0 +1,2144 @@
+--//========================================================
+--// A-60 CUSTOM ENTITY
+--//========================================================
+--// Dark fade-in
+--// Dark fade-out when despawning
+--// Instant dialogue + fade-out
+--// Random creepy dialogue
+--// 50 rebounds
+--// Custom jumpscare
+--// DeathDelay = 11.8
+--// Achievement on despawning
+--//========================================================
+
+
+--//========================================================
+--// LOAD SPAWNER
+--//========================================================
+
+local Spawner = loadstring(game:HttpGet(
+	"https://raw.githubusercontent.com/idkman60093/Doors-Modes/refs/heads/main/Entity%20Spawner%20V2"
+))()
+
+
+--//========================================================
+--// SERVICES
+--//========================================================
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+
+--//========================================================
+--// ASSETS
+--//========================================================
+
+local MUSIC_ID =
+	"rbxassetid://1843497734"
+
+local JUMPSCARE_SOUND_ID =
+	"rbxassetid://138072963204427"
+
+local FACE_ID =
+	"rbxassetid://12532482993"
+
+
+--//========================================================
+--// CONFIG
+--//========================================================
+
+local ENTITY_DELAY = 20
+
+local DEATH_DELAY = 11.8
+
+local FIRST_DIALOGUE_DELAY = 3
+
+-- Delay AFTER each dialogue message
+local NORMAL_DIALOGUE_DELAY = 6
+
+-- Dialogue only fades OUT
+local DIALOGUE_VISIBLE_TIME = 2
+local DIALOGUE_FADE_OUT = 1
+
+-- Jumpscare
+local FIRST_JUMPSCARE_TEXT_DELAY = 1.5
+local JUMPSCARE_WORD_DELAY = 2
+local JUMPSCARE_LINE_COUNT = 3
+
+-- Darkness fade-in
+local DARKNESS_FADE_TIME = 2.5
+
+-- Darkness fade-out
+local DARKNESS_FADE_OUT_TIME = 2.5
+
+
+--//========================================================
+--// STATE
+--//========================================================
+
+local Despawning = false
+local EntitySpawned = false
+local DialogueRunning = false
+local JumpscareRunning = false
+local FinalJumpscareStarted = false
+
+-- Prevent achievement from being given more than once
+local BadgeGiven = false
+
+
+math.randomseed(
+	math.floor(os.clock() * 100000)
+)
+
+
+--//========================================================
+--// SAVE ORIGINAL LIGHTING
+--//========================================================
+
+local OriginalBrightness =
+	Lighting.Brightness
+
+local OriginalClockTime =
+	Lighting.ClockTime
+
+local OriginalFogStart =
+	Lighting.FogStart
+
+local OriginalFogEnd =
+	Lighting.FogEnd
+
+local OriginalAmbient =
+	Lighting.Ambient
+
+local OriginalOutdoorAmbient =
+	Lighting.OutdoorAmbient
+
+
+--//========================================================
+--// COLOR CORRECTION
+--//========================================================
+
+local ColorCorrection =
+	Instance.new("ColorCorrectionEffect")
+
+ColorCorrection.Name =
+	"A60_Darkness"
+
+ColorCorrection.Brightness = 0
+ColorCorrection.Contrast = 0
+ColorCorrection.Saturation = 0
+
+ColorCorrection.Parent =
+	Lighting
+
+
+--//========================================================
+--// ATMOSPHERE
+--//========================================================
+
+local Atmosphere =
+	Instance.new("Atmosphere")
+
+Atmosphere.Name =
+	"A60_Atmosphere"
+
+Atmosphere.Density = 0
+Atmosphere.Offset = -0.15
+Atmosphere.Glare = 0
+Atmosphere.Haze = 0
+
+Atmosphere.Color =
+	Color3.fromRGB(
+		18,
+		18,
+		18
+	)
+
+Atmosphere.Decay =
+	Color3.fromRGB(
+		5,
+		5,
+		5
+	)
+
+Atmosphere.Parent =
+	Lighting
+
+
+--//========================================================
+--// DARKNESS FADE-IN
+--//========================================================
+
+local function MakeDark()
+
+	if Despawning then
+		return
+	end
+
+
+	--====================================================
+	-- START FROM CURRENT/NORMAL LIGHTING
+	--====================================================
+
+	Lighting.Brightness =
+		OriginalBrightness
+
+	Lighting.Ambient =
+		OriginalAmbient
+
+	Lighting.OutdoorAmbient =
+		OriginalOutdoorAmbient
+
+	ColorCorrection.Brightness = 0
+	ColorCorrection.Contrast = 0
+	ColorCorrection.Saturation = 0
+
+	Atmosphere.Density = 0
+	Atmosphere.Haze = 0
+
+
+	--====================================================
+	-- ROOM SETTINGS
+	--====================================================
+
+	Lighting.ClockTime = 0
+
+	Lighting.FogStart = 5
+	Lighting.FogEnd = 55
+
+
+	--====================================================
+	-- DARKNESS TARGET
+	--====================================================
+
+	local DarkTween =
+		TweenService:Create(
+
+			Lighting,
+
+			TweenInfo.new(
+				DARKNESS_FADE_TIME,
+				Enum.EasingStyle.Quad,
+				Enum.EasingDirection.InOut
+			),
+
+			{
+				Brightness = 0.45,
+
+				Ambient =
+					Color3.fromRGB(
+						18,
+						18,
+						18
+					),
+
+				OutdoorAmbient =
+					Color3.fromRGB(
+						10,
+						10,
+						10
+					)
+			}
+		)
+
+
+	--====================================================
+	-- COLOR DARKNESS
+	--====================================================
+
+	local ColorTween =
+		TweenService:Create(
+
+			ColorCorrection,
+
+			TweenInfo.new(
+				DARKNESS_FADE_TIME,
+				Enum.EasingStyle.Quad,
+				Enum.EasingDirection.InOut
+			),
+
+			{
+				Brightness = -0.25,
+				Contrast = 0.38,
+				Saturation = -0.45
+			}
+		)
+
+
+	--====================================================
+	-- ATMOSPHERE DARKNESS
+	--====================================================
+
+	local AtmosphereTween =
+		TweenService:Create(
+
+			Atmosphere,
+
+			TweenInfo.new(
+				DARKNESS_FADE_TIME,
+				Enum.EasingStyle.Quad,
+				Enum.EasingDirection.InOut
+			),
+
+			{
+				Density = 0.42,
+				Haze = 2.2
+			}
+		)
+
+
+	DarkTween:Play()
+	ColorTween:Play()
+	AtmosphereTween:Play()
+
+end
+
+
+--//========================================================
+--// DARKNESS FADE-OUT
+--//========================================================
+--// Called when the entity is ABOUT TO DESPAWN.
+--// Everything smoothly returns to the original lighting.
+
+local function FadeOutDarkness()
+
+	if not ColorCorrection
+		or not Atmosphere then
+
+		return
+	end
+
+
+	--====================================================
+	-- RESTORE CLOCK / FOG IMMEDIATELY
+	--====================================================
+
+	local ClockTween =
+		TweenService:Create(
+
+			Lighting,
+
+			TweenInfo.new(
+				DARKNESS_FADE_OUT_TIME,
+				Enum.EasingStyle.Quad,
+				Enum.EasingDirection.Out
+			),
+
+			{
+				Brightness =
+					OriginalBrightness,
+
+				ClockTime =
+					OriginalClockTime,
+
+				FogStart =
+					OriginalFogStart,
+
+				FogEnd =
+					OriginalFogEnd,
+
+				Ambient =
+					OriginalAmbient,
+
+				OutdoorAmbient =
+					OriginalOutdoorAmbient
+			}
+		)
+
+
+	--====================================================
+	-- COLOR CORRECTION FADE OUT
+	--====================================================
+
+	local ColorFadeOut =
+		TweenService:Create(
+
+			ColorCorrection,
+
+			TweenInfo.new(
+				DARKNESS_FADE_OUT_TIME,
+				Enum.EasingStyle.Quad,
+				Enum.EasingDirection.Out
+			),
+
+			{
+				Brightness = 0,
+				Contrast = 0,
+				Saturation = 0
+			}
+		)
+
+
+	--====================================================
+	-- ATMOSPHERE FADE OUT
+	--====================================================
+
+	local AtmosphereFadeOut =
+		TweenService:Create(
+
+			Atmosphere,
+
+			TweenInfo.new(
+				DARKNESS_FADE_OUT_TIME,
+				Enum.EasingStyle.Quad,
+				Enum.EasingDirection.Out
+			),
+
+			{
+				Density = 0,
+				Haze = 0
+			}
+		)
+
+
+	ClockTween:Play()
+	ColorFadeOut:Play()
+	AtmosphereFadeOut:Play()
+
+end
+
+
+--//========================================================
+--// RESTORE LIGHTING
+--//========================================================
+
+local function RestoreLighting()
+
+	Lighting.Brightness =
+		OriginalBrightness
+
+	Lighting.ClockTime =
+		OriginalClockTime
+
+	Lighting.FogStart =
+		OriginalFogStart
+
+	Lighting.FogEnd =
+		OriginalFogEnd
+
+	Lighting.Ambient =
+		OriginalAmbient
+
+	Lighting.OutdoorAmbient =
+		OriginalOutdoorAmbient
+
+
+	ColorCorrection.Brightness = 0
+	ColorCorrection.Contrast = 0
+	ColorCorrection.Saturation = 0
+
+
+	Atmosphere.Density = 0
+	Atmosphere.Haze = 0
+
+end
+
+
+--//========================================================
+--// ACHIEVEMENT
+--//========================================================
+
+local function GiveAchievement()
+
+	if BadgeGiven then
+		return
+	end
+
+	BadgeGiven = true
+
+
+	local success, achievementGiver =
+		pcall(function()
+
+			return loadstring(game:HttpGet(
+				"https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"
+			))()
+
+		end)
+
+
+	if not success
+		or not achievementGiver then
+
+		warn(
+			"A-60 achievement failed to load."
+		)
+
+		return
+
+	end
+
+
+	pcall(function()
+
+		achievementGiver({
+
+			Title =
+				"Pure Redline Anarchy",
+
+			Desc =
+				"Total Signal Destruction.",
+
+			Reason =
+				"Encounter the rarest entity Called Ą̵̘̥͉̘͖̱̥̺̿̀̈̒̂̅̀̅̈́̓̏͊͘͝-6̵̢̧̛̞̼̘͍̺̘̣̮̣͔͓͎̈́́̏͒̽̆̾̆͗̈́͘͜͠ͅ0̷̨͓̟̺̮̝̦̤̥̀̀̍ͅ",
+
+			Image =
+				"rbxassetid://11395251044"
+
+		})
+
+	end)
+
+end
+
+
+--//========================================================
+--// MUSIC
+--//========================================================
+
+local Music =
+	Instance.new("Sound")
+
+Music.Name =
+	"A60_Music"
+
+Music.SoundId =
+	MUSIC_ID
+
+Music.Volume = 2
+
+Music.PlaybackSpeed = 1
+
+Music.Looped = true
+
+Music.Parent =
+	SoundService
+
+
+--//========================================================
+--// NORMAL DIALOGUE GUI
+--//========================================================
+
+local DialogueGui =
+	Instance.new("ScreenGui")
+
+DialogueGui.Name =
+	"A60_Dialogue"
+
+DialogueGui.ResetOnSpawn =
+	false
+
+DialogueGui.IgnoreGuiInset =
+	true
+
+DialogueGui.Parent =
+	PlayerGui
+
+
+local DialogueText =
+	Instance.new("TextLabel")
+
+DialogueText.Name =
+	"Dialogue"
+
+DialogueText.AnchorPoint =
+	Vector2.new(
+		0.5,
+		0.5
+	)
+
+DialogueText.Position =
+	UDim2.new(
+		0.5,
+		0,
+		0.78,
+		0
+	)
+
+DialogueText.Size =
+	UDim2.new(
+		0.82,
+		0,
+		0.11,
+		0
+	)
+
+DialogueText.BackgroundTransparency =
+	1
+
+DialogueText.Text =
+	""
+
+DialogueText.TextTransparency =
+	1
+
+DialogueText.TextColor3 =
+	Color3.fromRGB(
+		200,
+		0,
+		0
+	)
+
+DialogueText.TextStrokeColor3 =
+	Color3.fromRGB(
+		0,
+		0,
+		0
+	)
+
+DialogueText.TextStrokeTransparency =
+	1
+
+DialogueText.Font =
+	Enum.Font.Antique
+
+DialogueText.TextScaled =
+	true
+
+DialogueText.TextWrapped =
+	true
+
+DialogueText.ZIndex =
+	20
+
+DialogueText.Parent =
+	DialogueGui
+
+
+--//========================================================
+--// RANDOM NORMAL DIALOGUE
+--//========================================================
+
+local DialogueLines = {
+
+	"I know where you are.",
+	"I can hear you.",
+	"You are not alone.",
+	"I see you.",
+	"Don't turn around.",
+	"I've been watching.",
+	"You cannot hide.",
+	"I know you're there.",
+	"Something is behind you.",
+	"Keep running.",
+	"I can hear your footsteps.",
+	"You should not have come here.",
+	"I've been waiting for you.",
+	"Don't look behind you.",
+	"You won't escape me.",
+	"I know where you're going.",
+	"Stop hiding.",
+	"I found you."
+
+}
+
+
+local LastDialogue = nil
+
+
+local function GetRandomDialogue()
+
+	local Line
+
+	repeat
+
+		Line =
+			DialogueLines[
+				math.random(
+					1,
+					#DialogueLines
+				)
+			]
+
+	until Line ~= LastDialogue
+
+	LastDialogue =
+		Line
+
+	return Line
+
+end
+
+
+--//========================================================
+--// SAY
+--// NO FADE-IN
+--// ONLY FADE-OUT
+--//========================================================
+
+local function Say(Text)
+
+	if Despawning
+		or FinalJumpscareStarted then
+
+		return false
+	end
+
+
+	DialogueText.Text =
+		Text
+
+	DialogueText.TextTransparency =
+		0
+
+	DialogueText.TextStrokeTransparency =
+		0
+
+
+	task.wait(
+		DIALOGUE_VISIBLE_TIME
+	)
+
+
+	if Despawning
+		or FinalJumpscareStarted then
+
+		DialogueText.Text =
+			""
+
+		return false
+	end
+
+
+	local FadeOut =
+		TweenService:Create(
+
+			DialogueText,
+
+			TweenInfo.new(
+				DIALOGUE_FADE_OUT,
+				Enum.EasingStyle.Quad,
+				Enum.EasingDirection.In
+			),
+
+			{
+				TextTransparency = 1,
+				TextStrokeTransparency = 1
+			}
+		)
+
+
+	FadeOut:Play()
+
+	FadeOut.Completed:Wait()
+
+
+	DialogueText.Text =
+		""
+
+	return true
+
+end
+
+
+--//========================================================
+--// START NORMAL DIALOGUE
+--//========================================================
+
+local function StartDialogue()
+
+	if DialogueRunning then
+		return
+	end
+
+
+	DialogueRunning =
+		true
+
+
+	task.spawn(function()
+
+		task.wait(
+			FIRST_DIALOGUE_DELAY
+		)
+
+
+		if Despawning
+			or FinalJumpscareStarted then
+
+			DialogueRunning =
+				false
+
+			return
+		end
+
+
+		Say(
+			"Im here..."
+		)
+
+
+		while not Despawning
+			and not FinalJumpscareStarted do
+
+			task.wait(
+				NORMAL_DIALOGUE_DELAY
+			)
+
+
+			if Despawning
+				or FinalJumpscareStarted then
+
+				break
+
+			end
+
+
+			Say(
+				GetRandomDialogue()
+			)
+
+		end
+
+
+		DialogueText.Text =
+			""
+
+		DialogueText.TextTransparency =
+			1
+
+		DialogueText.TextStrokeTransparency =
+			1
+
+
+		DialogueRunning =
+			false
+
+	end)
+
+end
+
+
+--//========================================================
+--// JUMPSCARE GUI
+--//========================================================
+
+local JumpscareGui =
+	Instance.new("ScreenGui")
+
+JumpscareGui.Name =
+	"A60_FinalJumpscare"
+
+JumpscareGui.ResetOnSpawn =
+	false
+
+JumpscareGui.IgnoreGuiInset =
+	true
+
+JumpscareGui.Enabled =
+	false
+
+JumpscareGui.Parent =
+	PlayerGui
+
+
+--//========================================================
+--// JUMPSCARE BACKGROUND
+--//========================================================
+
+local Background =
+	Instance.new("Frame")
+
+Background.Size =
+	UDim2.fromScale(
+		1,
+		1
+	)
+
+Background.BackgroundColor3 =
+	Color3.fromRGB(
+		0,
+		0,
+		0
+	)
+
+Background.BorderSizePixel =
+	0
+
+Background.Parent =
+	JumpscareGui
+
+
+--//========================================================
+--// FACE
+--//========================================================
+
+local Face =
+	Instance.new("ImageLabel")
+
+Face.Name =
+	"A60_Face"
+
+Face.AnchorPoint =
+	Vector2.new(
+		0.5,
+		0.5
+	)
+
+Face.Position =
+	UDim2.fromScale(
+		0.5,
+		0.5
+	)
+
+Face.Size =
+	UDim2.fromScale(
+		0.8,
+		0.8
+	)
+
+Face.BackgroundTransparency =
+	1
+
+Face.Image =
+	FACE_ID
+
+Face.ImageTransparency =
+	1
+
+Face.ScaleType =
+	Enum.ScaleType.Fit
+
+Face.ZIndex =
+	5
+
+Face.Parent =
+	JumpscareGui
+
+
+--//========================================================
+--// JUMPSCARE TEXT
+--//========================================================
+
+local JumpscareText =
+	Instance.new("TextLabel")
+
+JumpscareText.Name =
+	"JumpscareDialogue"
+
+JumpscareText.AnchorPoint =
+	Vector2.new(
+		0.5,
+		0.5
+	)
+
+JumpscareText.Position =
+	UDim2.fromScale(
+		0.5,
+		0.84
+	)
+
+JumpscareText.Size =
+	UDim2.fromScale(
+		0.84,
+		0.1
+	)
+
+JumpscareText.BackgroundTransparency =
+	1
+
+JumpscareText.Text =
+	""
+
+JumpscareText.TextColor3 =
+	Color3.fromRGB(
+		220,
+		0,
+		0
+	)
+
+JumpscareText.TextStrokeColor3 =
+	Color3.fromRGB(
+		0,
+		0,
+		0
+	)
+
+JumpscareText.TextStrokeTransparency =
+	0
+
+JumpscareText.Font =
+	Enum.Font.Antique
+
+JumpscareText.TextScaled =
+	true
+
+JumpscareText.TextWrapped =
+	true
+
+JumpscareText.ZIndex =
+	10
+
+JumpscareText.Parent =
+	JumpscareGui
+
+
+--//========================================================
+--// JUMPSCARE SOUND
+--//========================================================
+
+local Scream =
+	Instance.new("Sound")
+
+Scream.Name =
+	"A60_JumpscareSound"
+
+Scream.SoundId =
+	JUMPSCARE_SOUND_ID
+
+Scream.Volume =
+	5
+
+Scream.PlaybackSpeed =
+	1
+
+Scream.Looped =
+	false
+
+Scream.Parent =
+	SoundService
+
+
+--//========================================================
+--// RANDOM JUMPSCARE LINES
+--//========================================================
+
+local JumpscareLines = {
+
+	"there you are...",
+	"i found you...",
+	"you shouldn't be here...",
+	"don't look away...",
+	"i can see you...",
+	"you were never alone...",
+	"it's too late...",
+	"stop hiding...",
+	"i know where you are...",
+	"you can't escape...",
+	"don't turn around...",
+	"look at me...",
+	"i've been waiting...",
+	"you can't run forever...",
+	"you're already too late..."
+
+}
+
+
+--//========================================================
+--// GET RANDOM JUMPSCARE LINES
+--//========================================================
+
+local function GetRandomJumpscareLines()
+
+	local Available = {}
+
+
+	for _, Line in ipairs(
+		JumpscareLines
+	) do
+
+		table.insert(
+			Available,
+			Line
+		)
+
+	end
+
+
+	local Selected = {}
+
+
+	for i = 1,
+		JUMPSCARE_LINE_COUNT do
+
+		if #Available <= 0 then
+			break
+		end
+
+
+		local Index =
+			math.random(
+				1,
+				#Available
+			)
+
+
+		table.insert(
+			Selected,
+			Available[Index]
+		)
+
+
+		table.remove(
+			Available,
+			Index
+		)
+
+	end
+
+
+	return Selected
+
+end
+
+
+--//========================================================
+--// CAMERA SHAKE
+--//========================================================
+
+local function BrutalCameraShake(Duration)
+
+	local Camera =
+		workspace.CurrentCamera
+
+	if not Camera then
+		return
+	end
+
+
+	local Start =
+		tick()
+
+
+	while tick() - Start <
+		Duration do
+
+		if Despawning then
+			break
+		end
+
+
+		local Strength =
+			2.5
+
+
+		local X =
+			math.random(
+				-100,
+				100
+			) / 100
+			* Strength
+
+
+		local Y =
+			math.random(
+				-100,
+				100
+			) / 100
+			* Strength
+
+
+		local Z =
+			math.random(
+				-100,
+				100
+			) / 100
+			* Strength
+
+
+		local RX =
+			math.rad(
+				math.random(
+					-25,
+					25
+				)
+			)
+
+
+		local RY =
+			math.rad(
+				math.random(
+					-25,
+					25
+				)
+			)
+
+
+		local RZ =
+			math.rad(
+				math.random(
+					-25,
+					25
+				)
+			)
+
+
+		Camera.CFrame =
+			Camera.CFrame
+			* CFrame.new(
+				X,
+				Y,
+				Z
+			)
+			* CFrame.Angles(
+				RX,
+				RY,
+				RZ
+			)
+
+
+		RunService.RenderStepped:Wait()
+
+	end
+
+end
+
+
+--//========================================================
+--// CUSTOM JUMPSCARE
+--//========================================================
+
+local function DoJumpscare()
+
+	if JumpscareRunning
+		or Despawning then
+
+		return
+	end
+
+
+	FinalJumpscareStarted =
+		true
+
+
+	DialogueText.Text =
+		""
+
+	DialogueText.TextTransparency =
+		1
+
+	DialogueText.TextStrokeTransparency =
+		1
+
+
+	JumpscareRunning =
+		true
+
+
+	JumpscareGui.Enabled =
+		true
+
+
+	Background.BackgroundColor3 =
+		Color3.fromRGB(
+			0,
+			0,
+			0
+		)
+
+
+	Face.ImageTransparency =
+		1
+
+
+	JumpscareText.Text =
+		""
+
+
+	task.wait(
+		FIRST_JUMPSCARE_TEXT_DELAY
+	)
+
+
+	if Despawning then
+		return
+	end
+
+
+	local Lines =
+		GetRandomJumpscareLines()
+
+
+	for i = 1, 3 do
+
+		if Despawning then
+			return
+		end
+
+
+		JumpscareText.Text =
+			Lines[i]
+
+
+		JumpscareText.TextTransparency =
+			0
+
+		JumpscareText.TextStrokeTransparency =
+			0
+
+
+		for x = 1, 12 do
+
+			if Despawning then
+				return
+			end
+
+
+			JumpscareText.Position =
+				UDim2.fromScale(
+
+					0.5 +
+						math.random(
+							-8,
+							8
+						) / 1000,
+
+					0.84 +
+						math.random(
+							-8,
+							8
+						) / 1000
+
+				)
+
+
+			task.wait(
+				0.04
+			)
+
+		end
+
+
+		task.wait(
+			JUMPSCARE_WORD_DELAY
+		)
+
+	end
+
+
+	JumpscareText.Text =
+		""
+
+
+	task.wait(
+		0.4
+	)
+
+
+	if Despawning then
+		return
+	end
+
+
+	Background.BackgroundColor3 =
+		Color3.fromRGB(
+			130,
+			0,
+			0
+		)
+
+
+	task.wait(
+		0.035
+	)
+
+
+	Background.BackgroundColor3 =
+		Color3.fromRGB(
+			0,
+			0,
+			0
+		)
+
+
+	task.wait(
+		0.06
+	)
+
+
+	Face.ImageTransparency =
+		1
+
+	Face.Size =
+		UDim2.fromScale(
+			0.05,
+			0.05
+		)
+
+	Face.Position =
+		UDim2.fromScale(
+			0.5,
+			0.5
+		)
+
+	Face.Rotation =
+		0
+
+
+	Face.ImageTransparency =
+		0
+
+
+	local Zoom =
+		TweenService:Create(
+
+			Face,
+
+			TweenInfo.new(
+				0.07,
+				Enum.EasingStyle.Exponential,
+				Enum.EasingDirection.Out
+			),
+
+			{
+				Size =
+					UDim2.fromScale(
+						1.35,
+						1.35
+					)
+			}
+
+		)
+
+
+	Zoom:Play()
+
+
+	Scream:Stop()
+
+	Scream.TimePosition =
+		0
+
+	Scream.PlaybackSpeed =
+		1
+
+	Scream:Play()
+
+
+	local Duration =
+		Scream.TimeLength
+
+
+	if Duration <= 0 then
+		Duration = 5
+	end
+
+
+	task.spawn(function()
+
+		BrutalCameraShake(
+			Duration
+		)
+
+	end)
+
+
+	local FaceShakeStart =
+		tick()
+
+
+	while tick() - FaceShakeStart <
+		Duration do
+
+		if Despawning then
+			return
+		end
+
+
+		if math.random(1, 5) == 1 then
+
+			Background.BackgroundColor3 =
+				Color3.fromRGB(
+					100,
+					0,
+					0
+				)
+
+		else
+
+			Background.BackgroundColor3 =
+				Color3.fromRGB(
+					0,
+					0,
+					0
+				)
+
+		end
+
+
+		local ShakeX =
+			math.random(
+				-55,
+				55
+			) / 1000
+
+
+		local ShakeY =
+			math.random(
+				-55,
+				55
+			) / 1000
+
+
+		Face.Position =
+			UDim2.fromScale(
+				0.5 + ShakeX,
+				0.5 + ShakeY
+			)
+
+
+		Face.Rotation =
+			math.random(
+				-4,
+				4
+			)
+
+
+		local SizeX =
+			1.25 +
+			math.random(
+				-7,
+				7
+			) / 100
+
+
+		local SizeY =
+			1.25 +
+			math.random(
+				-7,
+				7
+			) / 100
+
+
+		Face.Size =
+			UDim2.fromScale(
+				SizeX,
+				SizeY
+			)
+
+
+		if math.random(1, 7) == 1 then
+
+			Face.ImageTransparency =
+				0.65
+
+
+			task.wait(
+				0.025
+			)
+
+
+			Face.ImageTransparency =
+				0
+
+		end
+
+
+		if math.random(1, 35) == 1 then
+
+			Face.Size =
+				UDim2.fromScale(
+					1.55,
+					1.55
+				)
+
+
+			Face.Position =
+				UDim2.fromScale(
+					0.5,
+					0.48
+				)
+
+
+			task.wait(
+				0.06
+			)
+
+		end
+
+
+		task.wait(
+			0.035
+		)
+
+	end
+
+
+	Face.Position =
+		UDim2.fromScale(
+			0.5,
+			0.5
+		)
+
+
+	Face.Size =
+		UDim2.fromScale(
+			1.25,
+			1.25
+		)
+
+
+	Face.Rotation =
+		0
+
+
+	Face.ImageTransparency =
+		1
+
+
+	JumpscareText.Text =
+		""
+
+
+	JumpscareGui.Enabled =
+		false
+
+
+	JumpscareRunning =
+		false
+
+end
+
+
+--//========================================================
+--// CREATE ENTITY
+--//========================================================
+
+local entity =
+	Spawner:Create({
+
+		Entity = {
+
+			Name =
+				"Ą̵̘̥͉̘͖̱̥̺̿̀̈̒̂̅̀̅̈́̓̏͊͘͝-ׁׅ6̵ׁ̢̧̛̞̼̘͍̺̘̣̮̣͔͓͎ׅ̈́́̏͒̽̆̾̆͗̈́͘͜͠ͅ0̷̨͓̟̺̮̝̦̤̥̀̀̍ͅ",
+
+			Asset =
+				"rbxassetid://105118118520690",
+
+			HeightOffset =
+				0
+		},
+
+
+		Lights = {
+
+			Flicker = {
+
+				Enabled =
+					false,
+
+				Duration =
+					1
+			},
+
+			Shatter =
+				true,
+
+			Repair =
+				false
+		},
+
+
+		Earthquake = {
+
+			Enabled =
+				false
+		},
+
+
+		CameraShake = {
+
+			Enabled =
+				true,
+
+			Range =
+				100,
+
+			Values = {
+
+				15,
+				45,
+				0.05,
+				0.15
+
+			}
+		},
+
+
+		Movement = {
+
+			Speed =
+				300,
+
+			Delay =
+				ENTITY_DELAY,
+
+			Reversed =
+				false
+		},
+
+
+		Rebounding = {
+
+			Enabled =
+				true,
+
+			Type =
+				"Ambush",
+
+			Min =
+				50,
+
+			Max =
+				50,
+
+			Delay =
+				0.12
+		},
+
+
+		Damage = {
+
+			Enabled =
+				true,
+
+			Range =
+				60,
+
+			Amount =
+				125,
+
+			DeathDelay =
+				DEATH_DELAY
+		},
+
+
+		Crucifixion = {
+
+			Enabled =
+				false,
+
+			Range =
+				40,
+
+			Resist =
+				false,
+
+			Break =
+				true
+		},
+
+
+		Death = {
+
+			Type =
+				"Guiding",
+
+			Hints = {
+
+				"You died to....",
+
+				"A-60??",
+
+				"But how? I... I just... Never seen these kind of.... Things because.... It's different...",
+
+				"Hide if you can..."
+			},
+
+			Cause =
+				"Ą̵̘̥͉̘͖̱̥̺̿̀̈̒̂̅̀̅̈́̓̏͊͘͝-ׁׅ6̵ׁ̢̧̛̞̼̘͍̺̘̣̮̣͔͓͎ׅ̈́́̏͒̽̆̾̆͗̈́͘͜͠ͅ0̷̨͓̟̺̮̝̦̤̥̀̀̍ͅ"
+		}
+
+	})
+
+
+--//========================================================
+--// ON SPAWNED
+--//========================================================
+
+entity:SetCallback(
+	"OnSpawned",
+	function()
+
+		print(
+			"Entity has spawned"
+		)
+
+
+		EntitySpawned =
+			true
+
+		Despawning =
+			false
+
+		DialogueRunning =
+			false
+
+		JumpscareRunning =
+			false
+
+		FinalJumpscareStarted =
+			false
+
+		-- Allow achievement again for a new spawn
+		BadgeGiven =
+			false
+
+
+		--================================================
+		-- FADE ROOM INTO DARKNESS
+		--================================================
+
+		MakeDark()
+
+
+		--================================================
+		-- START LOOPED MUSIC
+		--================================================
+
+		Music.PlaybackSpeed =
+			1
+
+		Music.Looped =
+			true
+
+
+		if not Music.IsPlaying then
+			Music:Play()
+		end
+
+
+		--================================================
+		-- START DIALOGUE
+		--================================================
+
+		StartDialogue()
+
+	end
+)
+
+
+--//========================================================
+--// ON START MOVING
+--//========================================================
+
+entity:SetCallback(
+	"OnStartMoving",
+	function()
+
+		print(
+			"Entity has started moving"
+		)
+
+
+		Music.PlaybackSpeed =
+			1
+
+	end
+)
+
+
+--//========================================================
+--// ON ENTER ROOM
+--//========================================================
+
+entity:SetCallback(
+	"OnEnterRoom",
+	function(
+		room: Model,
+		firstTime: boolean
+	)
+
+		if firstTime then
+
+			print(
+				"Entity has entered room: "
+				.. room.Name
+				.. " for the first time"
+			)
+
+		else
+
+			print(
+				"Entity has entered room: "
+				.. room.Name
+				.. " again"
+			)
+
+		end
+
+	end
+)
+
+
+--//========================================================
+--// ON LOOK AT
+--//========================================================
+
+entity:SetCallback(
+	"OnLookAt",
+	function(
+		lineOfSight: boolean
+	)
+
+		if lineOfSight then
+
+			print(
+				"Player is looking at entity"
+			)
+
+		else
+
+			print(
+				"Player view is obstructed by something"
+			)
+
+		end
+
+	end
+)
+
+
+--//========================================================
+--// ON REBOUNDING
+--//========================================================
+
+entity:SetCallback(
+	"OnRebounding",
+	function(
+		startOfRebound: boolean
+	)
+
+		if startOfRebound then
+
+			print(
+				"Entity has started rebounding"
+			)
+
+		else
+
+			print(
+				"Entity has finished rebounding"
+			)
+
+		end
+
+	end
+)
+
+
+--//========================================================
+--// ON DAMAGE PLAYER
+--//========================================================
+
+entity:SetCallback(
+	"OnDamagePlayer",
+	function(
+		newHealth: number
+	)
+
+		if Despawning then
+			return
+		end
+
+
+		if JumpscareRunning then
+			return
+		end
+
+
+		FinalJumpscareStarted =
+			true
+
+
+		DialogueText.Text =
+			""
+
+		DialogueText.TextTransparency =
+			1
+
+		DialogueText.TextStrokeTransparency =
+			1
+
+
+		task.spawn(
+			DoJumpscare
+		)
+
+	end
+)
+
+
+--//========================================================
+--// ON DESPAWNING
+--//========================================================
+--// Entity is ABOUT TO disappear here.
+--// Achievement appears here.
+--// Darkness begins fading out here.
+
+entity:SetCallback(
+	"OnDespawning",
+	function()
+
+		print(
+			"Entity is despawning"
+		)
+
+
+		Despawning =
+			true
+
+		FinalJumpscareStarted =
+			true
+
+
+		--================================================
+		-- GIVE ACHIEVEMENT
+		--================================================
+
+		GiveAchievement()
+
+
+		--================================================
+		-- STOP DIALOGUE
+		--================================================
+
+		DialogueText.Text =
+			""
+
+		DialogueText.TextTransparency =
+			1
+
+		DialogueText.TextStrokeTransparency =
+			1
+
+
+		--================================================
+		-- STOP JUMPSCARE
+		--================================================
+
+		JumpscareText.Text =
+			""
+
+		JumpscareGui.Enabled =
+			false
+
+
+		--================================================
+		-- FADE DARKNESS OUT
+		--================================================
+
+		FadeOutDarkness()
+
+
+		--================================================
+		-- STOP MUSIC
+		--================================================
+
+		if Music then
+
+			Music.Looped =
+				false
+
+			Music:Stop()
+
+		end
+
+
+		--================================================
+		-- STOP JUMPSCARE SOUND
+		--================================================
+
+		if Scream then
+
+			Scream:Stop()
+
+		end
+
+	end
+)
+
+
+--//========================================================
+--// ON DESPAWNED
+--//========================================================
+
+entity:SetCallback(
+	"OnDespawned",
+	function()
+
+		print(
+			"Entity has despawned"
+		)
+
+
+		Despawning =
+			true
+
+		EntitySpawned =
+			false
+
+		FinalJumpscareStarted =
+			true
+
+
+		-- Make absolutely sure lighting is restored
+		RestoreLighting()
+
+
+		--================================================
+		-- CLEAN UP MUSIC
+		--================================================
+
+		if Music then
+
+			Music:Stop()
+			Music:Destroy()
+
+		end
+
+
+		--================================================
+		-- CLEAN UP JUMPSCARE SOUND
+		--================================================
+
+		if Scream then
+
+			Scream:Stop()
+			Scream:Destroy()
+
+		end
+
+
+		--================================================
+		-- CLEAN UP LIGHTING EFFECTS
+		--================================================
+
+		if ColorCorrection then
+			ColorCorrection:Destroy()
+		end
+
+
+		if Atmosphere then
+			Atmosphere:Destroy()
+		end
+
+
+		--================================================
+		-- CLEAN UP GUI
+		--================================================
+
+		if DialogueGui then
+			DialogueGui:Destroy()
+		end
+
+
+		if JumpscareGui then
+			JumpscareGui:Destroy()
+		end
+
+	end
+)
+
+
+--//========================================================
+--// RUN ENTITY
+--//========================================================
+
+entity:Run(true)
